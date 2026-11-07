@@ -1,5 +1,5 @@
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open("himam-panel-v1").then((cache) => cache.addAll([
+  event.waitUntil(caches.open("himam-panel-v2").then((cache) => cache.addAll([
     "/",
     "/style.css",
     "/app.js",
@@ -11,7 +11,7 @@ self.addEventListener("install", (event) => {
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(caches.keys().then((keys) => Promise.all(
-    keys.filter((key) => key !== "himam-panel-v1").map((key) => caches.delete(key)),
+    keys.filter((key) => key !== "himam-panel-v2").map((key) => caches.delete(key)),
   )));
   self.clients.claim();
 });

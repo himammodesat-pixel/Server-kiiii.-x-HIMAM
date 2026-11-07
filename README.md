@@ -28,8 +28,13 @@ Stop a running server safely, even if the terminal used to start it is gone:
 
 The Android-friendly control panel starts automatically when the workspace
 opens. It shows server status, online players, and recent logs, and provides
-start/stop buttons, broadcasts, player moderation, whitelist controls, quick
-commands, and an authenticated Minecraft console. To start it manually, run
+start/stop/restart controls, Cloudflare Tunnel startup, broadcasts, player
+moderation, whitelist controls, quick commands, a Minecraft console, and a
+Pterodactyl-inspired file manager. The file manager is authenticated with the
+panel code and limited to world, plugins, config, logs (read-only), and
+allowlisted server configuration files. Text editing is limited to 1 MB;
+upload/download is limited to 10 MB. It cannot access `.paper` credentials,
+arbitrary workspace files, or a Linux shell. To start it manually, run
 `./start-server-panel.sh`.
 Forward port `8765` in the Codespaces **Ports** tab and keep its visibility set
 to **Private**. Open the forwarded HTTPS URL on your Android phone and use the
@@ -156,6 +161,12 @@ To start the web panel and Cloudflare Tunnel manually, run
 Minecraft server running, use `./cloudflare-stop.sh`. The start command checks
 that Cloudflare registers a live tunnel connection and reports an error if it
 does not.
+
+The **Codespace & Copilot** link opens GitHub Codespaces in a browser. Sign in
+to GitHub there and open the active Codespace to use VS Code and Copilot Chat;
+Copilot availability depends on the GitHub account. This is separate from the
+in-app Minecraft console and does not expose a Linux terminal through the
+public panel.
 
 The `.devcontainer` `postStartCommand` starts Paper, the control panel, and
 the configured tunnel whenever the container starts, including when the app

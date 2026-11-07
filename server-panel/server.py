@@ -6,11 +6,12 @@ import re
 import secrets
 import stat
 import subprocess
+import tempfile
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, quote, urlparse
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -18,6 +19,13 @@ TOKEN_FILE = ROOT / ".paper" / "server-panel-token"
 WEB_ROOT = Path(__file__).resolve().parent
 PORT = int(os.environ.get("SERVER_PANEL_PORT", "8765"))
 LOG_LIMIT = 12_000
+FILE_TEXT_LIMIT = 1_000_000
+FILE_TRANSFER_LIMIT = 10_000_000
+FILE_DIRECTORIES = {"config", "logs", "plugins", "world", "world_nether", "world_the_end"}
+FILE_ROOT_FILES = {
+    "banned-ips.json", "banned-players.json", "bukkit.yml", "commands.yml",
+    "ops.json", "server.properties", "spigot.yml", "wepif.yml", "whitelist.json",
+}
 PLAYER_RESULT = re.compile(
     r"There are (\d+)(?: of a max of (\d+)| out of maximum (\d+)) players online(?:: ?(.*))?"
 )
@@ -73,6 +81,93 @@ def read_log_tail():
     except FileNotFoundError:
         return ""
     return "\n".join(content.splitlines()[-80:])
+
+
+def resolve_file_path(relative_path, for_write=False):
+    if not isinstance(relative_path, str) or not relative_path or len(relative_path) > 512:
+        raise ValueError("Jalur file tidak valid.")
+    if relative_path.startswith("/") or "\\" in relative_path or "\0" in relative_path:
+        raise ValueError("Jalur file tidak valid.")
+    parts = relative_path.split("/")
+    if any(part in ("", ".", "..") for part in parts):
+        raise ValueError("Jalur file tidak valid.")
+    if parts[0] not in FILE_DIRECTORIES | FILE_ROOT_FILES:
+        raise ValueError("Akses file dibatasi ke folder data server.")
+    if parts[0] in FILE_ROOT_FILES and len(parts) != 1:
+        raise ValueError("Jalur file tidak valid.")
+    if for_write and parts[0] == "logs":
+        raise ValueError("Folder log hanya dapat dibaca.")
+
+    target = ROOT
+    for part in parts:
+        target = target / part
+        try:
+            if stat.S_ISLNK(target.lstat().st_mode):
+                raise ValueError("Akses ke symbolic link tidak diizinkan.")
+        except FileNotFoundError:
+            pass
+    try:
+        target.relative_to(ROOT)
+    except ValueError as error:
+        raise ValueError("Jalur file berada di luar folder server.") from error
+    return target
+
+
+def atomic_write_file(target, content):
+    if target.exists() and not target.is_file():
+        raise ValueError("Hanya file biasa yang dapat ditulis.")
+    parent = target.parent
+    if not parent.is_dir():
+        raise ValueError("Folder tujuan tidak ditemukan.")
+    old_mode = stat.S_IMODE(target.stat().st_mode) if target.exists() else 0o600
+    descriptor, temporary_name = tempfile.mkstemp(prefix=".panel-upload-", dir=parent)
+    try:
+        with os.fdopen(descriptor, "wb") as output:
+            output.write(content)
+            output.flush()
+            os.fsync(output.fileno())
+        os.chmod(temporary_name, old_mode)
+        os.replace(temporary_name, target)
+    except Exception:
+        try:
+            os.unlink(temporary_name)
+        except FileNotFoundError:
+            pass
+        raise
+
+
+def file_entries(directory):
+    if directory == ROOT:
+        names = sorted(FILE_DIRECTORIES) + sorted(FILE_ROOT_FILES)
+        paths = [ROOT / name for name in names]
+    else:
+        paths = list(directory.iterdir())
+        def sort_key(path):
+            try:
+                is_directory = stat.S_ISDIR(path.lstat().st_mode)
+            except FileNotFoundError:
+                is_directory = False
+            return (not is_directory, path.name.casefold())
+        paths.sort(key=sort_key)
+
+    entries = []
+    for path in paths[:500]:
+        try:
+            info = path.lstat()
+        except FileNotFoundError:
+            continue
+        if stat.S_ISLNK(info.st_mode):
+            continue
+        if not (stat.S_ISDIR(info.st_mode) or stat.S_ISREG(info.st_mode)):
+            continue
+        entries.append({
+            "name": path.name,
+            "path": path.relative_to(ROOT).as_posix(),
+            "directory": stat.S_ISDIR(info.st_mode),
+            "size": info.st_size,
+            "modified": int(info.st_mtime),
+        })
+    return entries
 
 
 def current_players():
@@ -172,8 +267,195 @@ class Handler(BaseHTTPRequestHandler):
         supplied = self.headers.get("X-Panel-Token", "")
         return hmac.compare_digest(supplied, self.server.panel_token)
 
+    def request_file_api(self, parsed_url):
+        query = parse_qs(parsed_url.query, keep_blank_values=True)
+        relative_path = query.get("path", [""])[0]
+        try:
+            target = ROOT if relative_path == "" else resolve_file_path(relative_path)
+            if target == ROOT:
+                self.respond(200, {"path": "", "parent": None, "entries": file_entries(ROOT)})
+                return
+            if target.is_dir():
+                parent = target.relative_to(ROOT).parent.as_posix()
+                if parent == ".":
+                    parent = ""
+                self.respond(200, {
+                    "path": target.relative_to(ROOT).as_posix(),
+                    "parent": parent,
+                    "entries": file_entries(target),
+                })
+                return
+            if not target.is_file():
+                self.respond(404, {"error": "File tidak ditemukan."})
+                return
+            if target.stat().st_size > FILE_TEXT_LIMIT:
+                self.respond(200, {"path": relative_path, "downloadOnly": True})
+                return
+            with target.open("rb") as source:
+                content = source.read(FILE_TEXT_LIMIT + 1)
+            if len(content) > FILE_TEXT_LIMIT:
+                self.respond(200, {"path": relative_path, "downloadOnly": True})
+                return
+            try:
+                text = content.decode("utf-8")
+            except UnicodeDecodeError:
+                self.respond(200, {"path": relative_path, "downloadOnly": True})
+                return
+            self.respond(200, {"path": relative_path, "content": text})
+        except ValueError as error:
+            self.respond(400, {"error": str(error)})
+        except FileNotFoundError:
+            self.respond(404, {"error": "Folder atau file tidak ditemukan."})
+        except OSError as error:
+            self.respond(500, {"error": f"Tidak dapat membaca file: {error.strerror or error}"})
+
+    def download_server_file(self, parsed_url):
+        query = parse_qs(parsed_url.query)
+        relative_path = query.get("path", [""])[0]
+        try:
+            target = resolve_file_path(relative_path)
+            if not target.is_file():
+                self.respond(400, {"error": "Pilih file untuk diunduh."})
+                return
+            descriptor = os.open(target, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+            with os.fdopen(descriptor, "rb") as source:
+                info = os.fstat(source.fileno())
+                if not stat.S_ISREG(info.st_mode) or info.st_size > FILE_TRANSFER_LIMIT:
+                    self.respond(413, {"error": "File bukan file biasa atau melebihi batas unduhan 10 MB."})
+                    return
+                content = source.read(FILE_TRANSFER_LIMIT + 1)
+            if len(content) > FILE_TRANSFER_LIMIT:
+                self.respond(413, {"error": "File melebihi batas unduhan 10 MB."})
+                return
+            self.respond_file(content, target.name)
+        except ValueError as error:
+            self.respond(400, {"error": str(error)})
+        except FileNotFoundError:
+            self.respond(404, {"error": "File tidak ditemukan."})
+        except OSError as error:
+            self.respond(500, {"error": f"Tidak dapat mengunduh file: {error.strerror or error}"})
+
+    def respond_file(self, content, filename):
+        self.send_response(200)
+        self.send_header("Content-Type", "application/octet-stream")
+        self.send_header("Content-Length", str(len(content)))
+        self.send_header("Content-Disposition", f'attachment; filename="{quote(filename, safe="")}"')
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.end_headers()
+        self.wfile.write(content)
+
+    def update_server_files(self):
+        if not self.authorized():
+            self.respond(401, {"error": "Kode panel salah atau belum diisi."})
+            return
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            self.respond(400, {"error": "Ukuran permintaan tidak valid."})
+            return
+        if length < 0:
+            self.respond(400, {"error": "Ukuran permintaan tidak valid."})
+            return
+        if length > FILE_TRANSFER_LIMIT:
+            self.respond(413, {"error": "File terlalu besar (maksimal 10 MB)."})
+            return
+
+        parsed_url = urlparse(self.path)
+        if parsed_url.path == "/api/files/upload":
+            query = parse_qs(parsed_url.query, keep_blank_values=True)
+            directory = query.get("path", [""])[0]
+            filename = query.get("name", [""])[0]
+            if not filename or filename in (".", "..") or "/" in filename or "\\" in filename or "\0" in filename:
+                self.respond(400, {"error": "Nama file unggahan tidak valid."})
+                return
+            try:
+                parent = ROOT if not directory else resolve_file_path(directory, for_write=True)
+                if not parent.is_dir():
+                    raise ValueError("Folder tujuan tidak ditemukan.")
+                target = resolve_file_path(f"{directory}/{filename}" if directory else filename, for_write=True)
+                atomic_write_file(target, self.rfile.read(length))
+                self.respond(200, {"message": f"File {filename} berhasil diunggah."})
+            except ValueError as error:
+                self.respond(400, {"error": str(error)})
+            except OSError as error:
+                self.respond(500, {"error": f"Unggah gagal: {error.strerror or error}"})
+            return
+
+        if parsed_url.path != "/api/files":
+            self.respond(404, {"error": "Tidak ditemukan."})
+            return
+        if length > FILE_TEXT_LIMIT + 2048:
+            self.respond(413, {"error": "File teks terlalu besar (maksimal 1 MB)."})
+            return
+        try:
+            body = json.loads(self.rfile.read(length))
+            if not isinstance(body, dict):
+                raise ValueError("Bentuk permintaan tidak valid.")
+        except (ValueError, json.JSONDecodeError):
+            self.respond(400, {"error": "Permintaan tidak valid."})
+            return
+
+        action = body.get("action")
+        try:
+            relative_path = body.get("path", "")
+            if action == "save":
+                content = body.get("content")
+                if not isinstance(content, str):
+                    raise ValueError("Isi file harus berupa teks.")
+                data = content.encode("utf-8")
+                if len(data) > FILE_TEXT_LIMIT:
+                    self.respond(413, {"error": "File teks terlalu besar (maksimal 1 MB)."})
+                    return
+                target = resolve_file_path(relative_path, for_write=True)
+                atomic_write_file(target, data)
+                self.respond(200, {"message": "File berhasil disimpan."})
+            elif action == "mkdir":
+                target = resolve_file_path(relative_path, for_write=True)
+                target.mkdir(mode=0o700)
+                self.respond(200, {"message": "Folder berhasil dibuat."})
+            elif action == "delete":
+                target = resolve_file_path(relative_path, for_write=True)
+                if target.is_dir():
+                    target.rmdir()
+                elif target.is_file():
+                    target.unlink()
+                else:
+                    raise FileNotFoundError
+                self.respond(200, {"message": "File atau folder kosong berhasil dihapus."})
+            elif action == "rename":
+                destination = body.get("newPath", "")
+                source_path = resolve_file_path(relative_path, for_write=True)
+                target_path = resolve_file_path(destination, for_write=True)
+                if source_path.parent != target_path.parent:
+                    raise ValueError("File hanya dapat diganti nama di folder yang sama.")
+                if target_path.exists():
+                    raise ValueError("Nama tujuan sudah digunakan.")
+                source_path.rename(target_path)
+                self.respond(200, {"message": "Nama berhasil diubah."})
+            else:
+                self.respond(400, {"error": "Aksi file tidak dikenal."})
+        except FileNotFoundError:
+            self.respond(404, {"error": "File atau folder tidak ditemukan."})
+        except FileExistsError:
+            self.respond(409, {"error": "File atau folder sudah ada."})
+        except ValueError as error:
+            self.respond(400, {"error": str(error)})
+        except OSError as error:
+            self.respond(500, {"error": f"Operasi file gagal: {error.strerror or error}"})
+
     def do_GET(self):
-        path = urlparse(self.path).path
+        parsed_url = urlparse(self.path)
+        path = parsed_url.path
+        if path in ("/api/files", "/api/files/download"):
+            if not self.authorized():
+                self.respond(401, {"error": "Kode panel salah atau belum diisi."})
+                return
+            if path == "/api/files":
+                self.request_file_api(parsed_url)
+            else:
+                self.download_server_file(parsed_url)
+            return
         if path in ("/api/status", "/api/log"):
             if not self.authorized():
                 self.respond(401, {"error": "Kode panel salah atau belum diisi."})
@@ -207,6 +489,9 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = urlparse(self.path).path
+        if path in ("/api/files", "/api/files/upload"):
+            self.update_server_files()
+            return
         if path not in ("/api/control", "/api/command"):
             self.respond(404, {"error": "Tidak ditemukan."})
             return
@@ -232,6 +517,7 @@ class Handler(BaseHTTPRequestHandler):
         action = body.get("action")
         scripts = {
             "start": (ROOT / "start-server-background.sh", 45),
+            "restart": (ROOT / "restart-server.sh", 210),
             "stop": (ROOT / "stop-server.sh", 150),
             "cloudflare-start": (ROOT / "cloudflare-start.sh", 45),
         }

@@ -3,104 +3,190 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#101a17">
-  <meta name="description" content="Panel privat untuk mengelola server Minecraft HIMAM SMP di Codespaces.">
+  <meta name="theme-color" content="#111827">
+  <meta name="description" content="HIMAM SMP server control panel.">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/style.css">
-  <title>HIMAM SMP · Panel</title>
+  <title>HIMAM SMP · Server Panel</title>
 </head>
 <body>
-  <main class="shell">
-    <header>
-      <div class="brand-mark" aria-hidden="true">H</div>
-      <div>
-        <p class="eyebrow">MINECRAFT SERVER</p>
-        <h1>HIMAM <span>SMP</span></h1>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="#" data-nav="overview">
+        <span class="brand-mark">H</span>
+        <span><strong>HIMAM SMP</strong><small>SERVER CONTROL</small></span>
+      </a>
+      <div class="server-select">
+        <span class="server-avatar">MC</span>
+        <span><strong>Vanilla SMP</strong><small><i id="sidebar-dot" class="dot"></i><span id="sidebar-state">Memeriksa status</span></small></span>
+        <span class="chevron">⌄</span>
       </div>
-    </header>
+      <p class="nav-label">SERVER</p>
+      <nav class="navigation" aria-label="Navigasi server">
+        <button class="nav-item active" type="button" data-nav="overview"><span>▦</span> Ringkasan</button>
+        <button class="nav-item" type="button" data-nav="console"><span>⌘</span> Console</button>
+        <button class="nav-item" type="button" data-nav="files"><span>▤</span> File manager</button>
+        <button class="nav-item" type="button" data-nav="players"><span>♙</span> Pemain & moderasi</button>
+      </nav>
+      <p class="nav-label">TOOLS</p>
+      <nav class="navigation" aria-label="Tools">
+        <a class="nav-item link-item" href="https://github.com/codespaces" target="_blank" rel="noopener noreferrer"><span>✦</span> Codespace & Copilot <span class="external">↗</span></a>
+        <button class="nav-item" type="button" data-nav="settings"><span>⚙</span> Akses & pengaturan</button>
+      </nav>
+      <div class="sidebar-bottom">
+        <span class="connection-mark"></span>
+        <span><strong>GitHub Codespaces</strong><small>Cloudflare Tunnel</small></span>
+      </div>
+    </aside>
 
-    <section class="card status-card" aria-live="polite">
-      <div class="status-heading">
+    <main class="main">
+      <header class="topbar">
         <div>
-          <p class="eyebrow">STATUS SERVER</p>
-          <h2 id="status-title">Menghubungkan…</h2>
+          <p class="eyebrow">MINECRAFT SERVER</p>
+          <h1 id="page-title">Ringkasan</h1>
         </div>
-        <span id="status-dot" class="status-dot"></span>
-      </div>
-      <p id="player-count" class="player-count">Menunggu status</p>
-      <p id="updated-at" class="muted">Status diperbarui otomatis.</p>
-      <div class="actions">
-        <button id="start-button" class="button primary" type="button">▶ Nyalakan</button>
-        <button id="stop-button" class="button secondary" type="button">■ Matikan</button>
-      </div>
-    </section>
-
-    <section class="card control-card">
-      <div class="logs-heading">
-        <div>
-          <p class="eyebrow">KONTROL ADMIN</p>
-          <h2>Kelola server</h2>
+        <div class="top-actions">
+          <span class="connection-pill"><i class="dot" id="top-dot"></i><span id="connection-state">Memeriksa koneksi</span></span>
+          <a class="button button-muted copilot-link" href="https://github.com/codespaces" target="_blank" rel="noopener noreferrer">✦ Buka Codespace / Copilot</a>
         </div>
-      </div>
-      <label for="broadcast-message">Pengumuman ke semua pemain</label>
-      <div class="control-row">
-        <input id="broadcast-message" maxlength="160" placeholder="Tulis pengumuman…" autocomplete="off">
-        <button id="broadcast-button" class="button small" type="button">Kirim</button>
-      </div>
+      </header>
 
-      <label for="player-name">Moderasi pemain</label>
-      <div class="control-row moderation-row">
-        <input id="player-name" maxlength="16" placeholder="Nama pemain" autocomplete="off">
-        <select id="player-action" aria-label="Aksi pemain">
-          <option value="kick">Kick</option>
-          <option value="ban">Ban</option>
-          <option value="pardon">Unban</option>
-          <option value="whitelist add">Whitelist +</option>
-          <option value="whitelist remove">Whitelist −</option>
-        </select>
-      </div>
-      <input id="player-reason" class="reason-input" maxlength="100" placeholder="Alasan (opsional)" autocomplete="off">
-      <button id="player-action-button" class="button small" type="button">Jalankan aksi</button>
-
-      <label class="quick-label">Perintah cepat</label>
-      <div class="quick-actions">
-        <button class="button small quick-command" data-command="list" type="button">Daftar pemain</button>
-        <button class="button small quick-command" data-command="save-all" type="button">Simpan dunia</button>
-        <button class="button small quick-command" data-command="time set day" type="button">Siang</button>
-        <button class="button small quick-command" data-command="weather clear" type="button">Cuaca cerah</button>
-      </div>
-
-      <label for="console-command">Console Minecraft</label>
-      <div class="control-row">
-        <input id="console-command" maxlength="256" placeholder="Contoh: gamemode creative Nama" autocomplete="off">
-        <button id="console-button" class="button small" type="button">Kirim</button>
-      </div>
-      <p class="muted control-warning">Console memberi akses admin penuh ke Minecraft. Jangan gunakan perintah yang tidak kamu pahami. Server/Linux tidak dapat dikendalikan dari kolom ini.</p>
-    </section>
-
-    <section class="card access-card">
-      <label for="access-code">Kode akses panel</label>
-      <div class="access-row">
-        <input id="access-code" type="password" autocomplete="current-password" placeholder="Tempel kode dari Codespace">
-        <button id="save-code" class="button small" type="button">Simpan</button>
-      </div>
-      <p id="access-feedback" class="muted">Kode tersimpan di browser ini sampai dihapus. Gunakan hanya di perangkat pribadi dan jangan bagikan kode akses.</p>
-    </section>
-
-    <section class="card logs-card">
-      <div class="logs-heading">
-        <div>
-          <p class="eyebrow">AKTIVITAS TERBARU</p>
-          <h2>Log server</h2>
+      <section class="page active" data-page="overview">
+        <div class="server-banner">
+          <div class="banner-copy">
+            <p class="eyebrow">SERVER MINECRAFT · HIMAM SMP</p>
+            <h2 id="status-title">Menghubungkan…</h2>
+            <p id="player-count" class="muted">Menunggu status server</p>
+            <p id="updated-at" class="muted small-text">Status diperbarui otomatis.</p>
+          </div>
+          <div class="banner-actions">
+            <button id="start-button" class="button button-green" type="button">▶ Nyalakan</button>
+            <button id="stop-button" class="button button-red" type="button">■ Matikan</button>
+            <button id="restart-button" class="button button-muted" type="button">↻ Restart</button>
+          </div>
         </div>
-        <button id="refresh-logs" class="button small" type="button">Muat ulang</button>
-      </div>
-      <pre id="logs">Masukkan kode akses untuk melihat log.</pre>
-    </section>
 
-    <p class="footnote">Panel ini memakai resource Codespaces. Menutup server tidak menghentikan Codespace, dan Codespaces tetap memiliki batas idle serta masa hidup.</p>
-  </main>
+        <div class="stat-grid">
+          <article class="stat-card"><span class="stat-icon green">●</span><span class="stat-copy"><small>STATUS SERVER</small><strong id="stat-server">Memeriksa</strong></span></article>
+          <article class="stat-card"><span class="stat-icon blue">♙</span><span class="stat-copy"><small>PEMAIN ONLINE</small><strong id="stat-players">—</strong></span></article>
+          <article class="stat-card"><span class="stat-icon purple">☁</span><span class="stat-copy"><small>CLOUDFLARE TUNNEL</small><strong id="stat-tunnel">Memeriksa</strong></span></article>
+        </div>
+
+        <div class="content-grid">
+          <section class="panel-card">
+            <div class="section-heading"><div><p class="eyebrow">AKTIVITAS</p><h2>Console terbaru</h2></div><button class="text-button" type="button" data-nav="console">Buka console →</button></div>
+            <pre id="overview-logs" class="log-output compact">Masukkan kode panel untuk melihat log.</pre>
+          </section>
+          <section class="panel-card">
+            <div class="section-heading"><div><p class="eyebrow">AKSES CEPAT</p><h2>Kelola server</h2></div></div>
+            <div class="quick-grid">
+              <button class="quick-tile" type="button" data-nav="files"><span>▤</span><strong>File manager</strong><small>World, plugin, konfigurasi</small></button>
+              <button class="quick-tile" type="button" data-nav="players"><span>♙</span><strong>Pemain</strong><small>Moderasi & whitelist</small></button>
+              <a class="quick-tile" href="https://github.com/codespaces" target="_blank" rel="noopener noreferrer"><span>✦</span><strong>AI Codespace</strong><small>Buka VS Code & Copilot</small></a>
+              <button id="start-cloudflare" class="quick-tile" type="button"><span>☁</span><strong>Nyalakan Tunnel</strong><small>Jalankan Cloudflare</small></button>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="page" data-page="console">
+        <section class="panel-card console-card">
+          <div class="section-heading"><div><p class="eyebrow">LIVE SERVER CONSOLE</p><h2>Console Minecraft</h2></div><button id="refresh-logs" class="button button-muted" type="button">↻ Muat ulang</button></div>
+          <p class="muted">Console ini hanya mengirim perintah Minecraft, bukan shell Linux Codespace.</p>
+          <pre id="logs" class="log-output">Masukkan kode panel untuk melihat log.</pre>
+          <div class="console-form">
+            <span class="prompt">&gt;</span>
+            <input id="console-command" maxlength="256" placeholder="Ketik perintah Minecraft, mis. list atau time set day" autocomplete="off">
+            <button id="console-button" class="button button-green" type="button">Kirim</button>
+          </div>
+          <p class="muted small-text">Perintah admin/destruktif meminta konfirmasi. Gunakan tombol Matikan/Restart untuk power server.</p>
+        </section>
+        <section class="panel-card">
+          <div class="section-heading"><div><p class="eyebrow">PERINTAH UMUM</p><h2>Quick actions</h2></div></div>
+          <div class="quick-actions">
+            <button class="button button-muted quick-command" data-command="list" type="button">Daftar pemain</button>
+            <button class="button button-muted quick-command" data-command="save-all" type="button">Simpan dunia</button>
+            <button class="button button-muted quick-command" data-command="time set day" type="button">Siang</button>
+            <button class="button button-muted quick-command" data-command="weather clear" type="button">Cuaca cerah</button>
+          </div>
+        </section>
+      </section>
+
+      <section class="page" data-page="files">
+        <section class="panel-card file-card">
+          <div class="section-heading file-heading">
+            <div><p class="eyebrow">SERVER FILES</p><h2>File manager</h2><p class="muted">Akses dibatasi ke world, plugins, config, logs, dan file konfigurasi server.</p></div>
+            <div class="file-actions">
+              <button id="new-folder" class="button button-muted" type="button">＋ Folder</button>
+              <button id="new-file" class="button button-muted" type="button">＋ File</button>
+              <label class="button button-muted upload-button" for="upload-file">↑ Unggah</label>
+              <input id="upload-file" type="file" hidden>
+            </div>
+          </div>
+          <div class="file-toolbar">
+            <div id="breadcrumbs" class="breadcrumbs"></div>
+            <button id="refresh-files" class="icon-button" type="button" title="Muat ulang file">↻</button>
+          </div>
+          <p id="file-feedback" class="feedback" aria-live="polite"></p>
+          <div class="file-layout">
+            <div class="file-list-wrap">
+              <table class="file-table">
+                <thead><tr><th>Nama</th><th>Tipe</th><th>Ukuran</th><th></th></tr></thead>
+                <tbody id="file-list"><tr><td colspan="4" class="empty-state">Masukkan kode panel untuk membuka file.</td></tr></tbody>
+              </table>
+            </div>
+            <div id="file-editor" class="file-editor">
+              <div class="editor-heading"><span id="editor-name">Pilih file teks untuk diedit</span><div class="editor-actions"><button id="rename-file" class="icon-button" type="button" disabled title="Ganti nama">Ganti nama</button><button id="download-file" class="icon-button" type="button" disabled title="Unduh">Unduh</button><button id="delete-file" class="icon-button danger-text" type="button" disabled title="Hapus">Hapus</button><button id="save-file" class="button button-green" type="button" disabled>Simpan</button></div></div>
+              <textarea id="file-content" spellcheck="false" placeholder="Pilih file teks untuk melihat atau mengedit isinya." disabled></textarea>
+            </div>
+          </div>
+          <p class="muted small-text">Batas editor teks 1 MB, unggah/unduh 10 MB. Link, secrets Codespace, terminal Linux, dan file sistem tidak tersedia.</p>
+        </section>
+      </section>
+
+      <section class="page" data-page="players">
+        <div class="content-grid">
+          <section class="panel-card">
+            <div class="section-heading"><div><p class="eyebrow">PLAYER MANAGEMENT</p><h2>Pemain & moderasi</h2></div></div>
+            <label for="player-name">Nama pemain</label>
+            <input id="player-name" class="full-input" maxlength="16" placeholder="Nama Minecraft" autocomplete="off">
+            <label for="player-action">Tindakan</label>
+            <select id="player-action" class="full-input">
+              <option value="kick">Kick</option><option value="ban">Ban</option><option value="pardon">Unban</option><option value="whitelist add">Whitelist +</option><option value="whitelist remove">Whitelist −</option>
+            </select>
+            <label for="player-reason">Alasan (opsional)</label>
+            <input id="player-reason" class="full-input" maxlength="100" placeholder="Alasan tindakan">
+            <button id="player-action-button" class="button button-muted" type="button">Jalankan tindakan</button>
+          </section>
+          <section class="panel-card">
+            <div class="section-heading"><div><p class="eyebrow">SERVER ANNOUNCEMENT</p><h2>Pengumuman</h2></div></div>
+            <label for="broadcast-message">Pesan ke semua pemain</label>
+            <textarea id="broadcast-message" class="full-input" maxlength="160" placeholder="Tulis pengumuman…" rows="4"></textarea>
+            <button id="broadcast-button" class="button button-green" type="button">Kirim pengumuman</button>
+            <div class="section-heading subheading"><div><p class="eyebrow">WHITELIST & STATUS</p><h2>Quick actions</h2></div></div>
+            <div class="quick-actions"><button class="button button-muted quick-command" data-command="list" type="button">Daftar pemain</button><button class="button button-muted quick-command" data-command="whitelist list" type="button">Lihat whitelist</button><button class="button button-muted quick-command" data-command="save-all" type="button">Simpan dunia</button></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="page" data-page="settings">
+        <section class="panel-card access-card">
+          <div class="section-heading"><div><p class="eyebrow">SECURITY</p><h2>Akses panel</h2></div></div>
+          <label for="access-code">Kode akses panel</label>
+          <div class="access-row"><input id="access-code" type="password" autocomplete="current-password" placeholder="Tempel kode dari Codespace"><button id="save-code" class="button button-green" type="button">Simpan</button></div>
+          <p id="access-feedback" class="feedback">Kode tersimpan di browser ini sampai dihapus. Gunakan hanya di perangkat pribadi.</p>
+        </section>
+        <section class="panel-card">
+          <div class="section-heading"><div><p class="eyebrow">CODESPACE & AI</p><h2>VS Code dan Copilot</h2></div></div>
+          <p class="muted">Tombol ini membuka halaman GitHub Codespaces agar kamu dapat membuka Codespace dan memakai Copilot Chat jika akunmu memiliki akses.</p>
+          <a class="button button-muted inline-button" href="https://github.com/codespaces" target="_blank" rel="noopener noreferrer">✦ Buka Codespace / Copilot ↗</a>
+        </section>
+      </section>
+
+      <footer class="footer-note">Server menggunakan resource GitHub Codespaces. Tunnel Cloudflare berhenti ketika Codespace berhenti; batas idle dan masa hidup GitHub tetap berlaku.</footer>
+    </main>
+  </div>
   <script src="/app.js" defer></script>
 </body>
 </html>
