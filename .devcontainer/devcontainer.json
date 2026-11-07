@@ -1,0 +1,6 @@
+{
+  "name": "HIMAM SMP server",
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  "postCreateCommand": "sudo bash .devcontainer/install-cloudflared.sh",
+  "postStartCommand": "./start-codespace-services.sh"
+}

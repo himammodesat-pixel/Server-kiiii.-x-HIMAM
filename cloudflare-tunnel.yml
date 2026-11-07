@@ -1,0 +1,7 @@
+tunnel: b3723ba3-3b73-4c92-963a-d620d755dbd4
+credentials-file: .paper/cloudflare-tunnel-credentials.json
+
+ingress:
+  - hostname: panel.vannilasmp.my.id
+    service: http://127.0.0.1:8765
+  - service: http_status:404

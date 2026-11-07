@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101a17">
+  <meta name="description" content="Panel privat untuk mengelola server Minecraft HIMAM SMP di Codespaces.">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css">
+  <title>HIMAM SMP · Panel</title>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div class="brand-mark" aria-hidden="true">H</div>
+      <div>
+        <p class="eyebrow">MINECRAFT SERVER</p>
+        <h1>HIMAM <span>SMP</span></h1>
+      </div>
+    </header>
+
+    <section class="card status-card" aria-live="polite">
+      <div class="status-heading">
+        <div>
+          <p class="eyebrow">STATUS SERVER</p>
+          <h2 id="status-title">Menghubungkan…</h2>
+        </div>
+        <span id="status-dot" class="status-dot"></span>
+      </div>
+      <p id="player-count" class="player-count">Menunggu status</p>
+      <p id="updated-at" class="muted">Status diperbarui otomatis.</p>
+      <div class="actions">
+        <button id="start-button" class="button primary" type="button">▶ Nyalakan</button>
+        <button id="stop-button" class="button secondary" type="button">■ Matikan</button>
+      </div>
+    </section>
+
+    <section class="card control-card">
+      <div class="logs-heading">
+        <div>
+          <p class="eyebrow">KONTROL ADMIN</p>
+          <h2>Kelola server</h2>
+        </div>
+      </div>
+      <label for="broadcast-message">Pengumuman ke semua pemain</label>
+      <div class="control-row">
+        <input id="broadcast-message" maxlength="160" placeholder="Tulis pengumuman…" autocomplete="off">
+        <button id="broadcast-button" class="button small" type="button">Kirim</button>
+      </div>
+
+      <label for="player-name">Moderasi pemain</label>
+      <div class="control-row moderation-row">
+        <input id="player-name" maxlength="16" placeholder="Nama pemain" autocomplete="off">
+        <select id="player-action" aria-label="Aksi pemain">
+          <option value="kick">Kick</option>
+          <option value="ban">Ban</option>
+          <option value="pardon">Unban</option>
+          <option value="whitelist add">Whitelist +</option>
+          <option value="whitelist remove">Whitelist −</option>
+        </select>
+      </div>
+      <input id="player-reason" class="reason-input" maxlength="100" placeholder="Alasan (opsional)" autocomplete="off">
+      <button id="player-action-button" class="button small" type="button">Jalankan aksi</button>
+
+      <label class="quick-label">Perintah cepat</label>
+      <div class="quick-actions">
+        <button class="button small quick-command" data-command="list" type="button">Daftar pemain</button>
+        <button class="button small quick-command" data-command="save-all" type="button">Simpan dunia</button>
+        <button class="button small quick-command" data-command="time set day" type="button">Siang</button>
+        <button class="button small quick-command" data-command="weather clear" type="button">Cuaca cerah</button>
+      </div>
+
+      <label for="console-command">Console Minecraft</label>
+      <div class="control-row">
+        <input id="console-command" maxlength="256" placeholder="Contoh: gamemode creative Nama" autocomplete="off">
+        <button id="console-button" class="button small" type="button">Kirim</button>
+      </div>
+      <p class="muted control-warning">Console memberi akses admin penuh ke Minecraft. Jangan gunakan perintah yang tidak kamu pahami. Server/Linux tidak dapat dikendalikan dari kolom ini.</p>
+    </section>
+
+    <section class="card access-card">
+      <label for="access-code">Kode akses panel</label>
+      <div class="access-row">
+        <input id="access-code" type="password" autocomplete="current-password" placeholder="Tempel kode dari Codespace">
+        <button id="save-code" class="button small" type="button">Simpan</button>
+      </div>
+      <p id="access-feedback" class="muted">Kode tersimpan hanya di sesi browser ini. Jangan bagikan tautan port atau kode akses.</p>
+    </section>
+
+    <section class="card logs-card">
+      <div class="logs-heading">
+        <div>
+          <p class="eyebrow">AKTIVITAS TERBARU</p>
+          <h2>Log server</h2>
+        </div>
+        <button id="refresh-logs" class="button small" type="button">Muat ulang</button>
+      </div>
+      <pre id="logs">Masukkan kode akses untuk melihat log.</pre>
+    </section>
+
+    <p class="footnote">Panel ini memakai resource Codespaces. Menutup server tidak menghentikan Codespace, dan Codespaces tetap memiliki batas idle serta masa hidup.</p>
+  </main>
+  <script src="/app.js" defer></script>
+</body>
+</html>

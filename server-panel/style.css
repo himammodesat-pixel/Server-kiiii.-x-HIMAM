@@ -1,0 +1,61 @@
+:root {
+  color-scheme: dark;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #101a17;
+  color: #eef4ed;
+  font-synthesis: none;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background: radial-gradient(ellipse at 50% -10%, #234438 0, #101a17 52%);
+}
+
+.shell { width: min(100% - 32px, 560px); margin: 0 auto; padding: 28px 0 42px; }
+header, .status-heading, .logs-heading { display: flex; align-items: center; }
+header { gap: 14px; margin: 4px 0 24px; }
+.brand-mark { display: grid; width: 48px; height: 48px; place-items: center; border: 1px solid #659875; border-radius: 15px; background: #1b3027; color: #b7edbd; font-size: 24px; font-weight: 800; }
+.eyebrow { margin: 0 0 5px; color: #91b69d; font-size: 11px; font-weight: 750; letter-spacing: .14em; }
+h1, h2, p { margin-top: 0; }
+h1 { margin-bottom: 0; font-size: 23px; letter-spacing: .04em; }
+h1 span { color: #9bd6a4; }
+h2 { margin: 0; font-size: 21px; }
+.card { margin-bottom: 14px; padding: 20px; border: 1px solid #2d4439; border-radius: 18px; background: rgb(21 34 29 / 94%); box-shadow: 0 12px 32px rgb(0 0 0 / 14%); }
+.status-heading, .logs-heading { justify-content: space-between; gap: 12px; }
+.status-dot { width: 12px; height: 12px; flex: 0 0 auto; border-radius: 50%; background: #85918a; box-shadow: 0 0 0 5px rgb(133 145 138 / 12%); }
+.status-dot.online { background: #78db8a; box-shadow: 0 0 0 5px rgb(120 219 138 / 13%); }
+.status-dot.offline { background: #e98175; box-shadow: 0 0 0 5px rgb(233 129 117 / 12%); }
+.player-count { margin: 14px 0 3px; font-size: 17px; font-weight: 650; }
+.muted { margin: 0; color: #9aaba1; font-size: 13px; line-height: 1.5; }
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+.button { min-height: 46px; padding: 0 15px; border: 1px solid #3b5949; border-radius: 12px; background: #20362b; color: #eaf5e9; font: inherit; font-weight: 700; cursor: pointer; }
+.button:disabled { cursor: wait; opacity: .55; }
+.button.primary { border-color: #83c88e; background: #72c982; color: #102015; }
+.button.secondary { border-color: #654540; background: #382723; color: #ffd2ca; }
+.button.small { min-height: 40px; padding: 0 13px; white-space: nowrap; }
+.access-card label, .control-card label, .quick-label { display: block; margin: 16px 0 8px; font-size: 14px; font-weight: 700; }
+.access-card label:first-child, .control-card label:first-of-type { margin-top: 0; }
+.access-row { display: flex; gap: 8px; margin-bottom: 9px; }
+input { min-width: 0; min-height: 44px; flex: 1; padding: 0 12px; border: 1px solid #3b5949; border-radius: 10px; outline: none; background: #0e1713; color: #eef4ed; font: inherit; }
+input:focus { border-color: #83c88e; }
+.control-row { display: flex; gap: 8px; }
+.control-row input { width: 0; }
+.control-row select { min-width: 112px; max-width: 145px; padding: 0 9px; border: 1px solid #3b5949; border-radius: 10px; background: #0e1713; color: #eef4ed; font: inherit; }
+.reason-input { display: block; width: 100%; margin-top: 8px; }
+.moderation-row { margin-bottom: 8px; }
+.quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.quick-actions .button { white-space: normal; }
+.quick-label { margin-top: 18px !important; }
+.control-warning { margin-top: 9px; }
+.access-card #access-feedback { min-height: 1.5em; }
+.access-card #access-feedback.error { color: #ffaba0; }
+.access-card #access-feedback.success { color: #9ce0a7; }
+.logs-card { padding-bottom: 14px; }
+.logs-heading { margin-bottom: 14px; }
+pre { max-height: 340px; min-height: 90px; overflow: auto; margin: 0; padding: 13px; border: 1px solid #273a31; border-radius: 11px; background: #0b120f; color: #c4d5ca; font: 11px/1.55 ui-monospace, SFMono-Regular, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+.footnote { padding: 0 4px; color: #91a197; font-size: 12px; line-height: 1.6; }
+@media (max-width: 380px) { .shell { width: min(100% - 22px, 560px); padding-top: 20px; } .card { padding: 16px; } }

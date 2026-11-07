@@ -1,0 +1,44 @@
+plugins {
+    id "com.android.application"
+}
+
+def codespaceName = System.getenv("CODESPACE_NAME") ?: ""
+def forwardingDomain = System.getenv("GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN") ?: "app.github.dev"
+def githubOAuthClientId = providers.gradleProperty("githubOAuthClientId").orElse("").get()
+def publicPanelUrl = providers.gradleProperty("publicPanelUrl")
+        .orElse("https://panel.vannilasmp.my.id/")
+        .get()
+if (!githubOAuthClientId.matches("[A-Za-z0-9]*")) {
+    throw new GradleException("githubOAuthClientId must contain only letters and numbers.")
+}
+if (!(publicPanelUrl ==~ /^https:\/\/[A-Za-z0-9.-]+\/?$/)) {
+    throw new GradleException("publicPanelUrl must be an HTTPS URL without a path or credentials.")
+}
+def defaultPanelUrl = codespaceName
+        ? "https://${codespaceName}-8765.${forwardingDomain}/"
+        : ""
+
+android {
+    namespace "com.himam.panel"
+    compileSdk 36
+
+    defaultConfig {
+        applicationId "com.himam.panel"
+        minSdk 23
+        targetSdk 35
+        versionCode 2
+        versionName "1.0.1"
+        buildConfigField "String", "DEFAULT_PANEL_URL", "\"${defaultPanelUrl}\""
+        buildConfigField "String", "GITHUB_OAUTH_CLIENT_ID", "\"${githubOAuthClientId}\""
+        buildConfigField "String", "CODESPACE_NAME", "\"${codespaceName}\""
+        buildConfigField "String", "PUBLIC_PANEL_URL", "\"${publicPanelUrl}\""
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+}
+
+dependencies {
+    implementation "androidx.browser:browser:1.8.0"
+}

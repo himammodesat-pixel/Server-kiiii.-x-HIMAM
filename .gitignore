@@ -1,0 +1,12 @@
+.paper/server-panel-token
+.paper/server-panel.pid
+.paper/cloudflare-tunnel-token
+.paper/cloudflare-tunnel-credentials.json
+.paper/cloudflare-tunnel.pid
+.paper/server-manager.pid
+logs/server-panel.log
+logs/cloudflare-tunnel.log
+server-panel/__pycache__/
+/android-panel/.gradle/
+/android-panel/local.properties
+/android-panel/app/build/
