@@ -76,6 +76,7 @@ public final class MainActivity extends Activity {
     private Button refreshButton;
     private Button startServerButton;
     private Button stopServerButton;
+    private Button startCloudflareButton;
     private Button broadcastButton;
     private Button playerActionButton;
     private Button commandButton;
@@ -102,7 +103,7 @@ public final class MainActivity extends Activity {
         page.addView(eyebrow);
         page.addView(text("HIMAM SMP", 30, 0xFFEEF4ED, true), margin(0, 5, 0, 8));
         page.addView(text(
-                "Kontrol Codespace, server, dan Cloudflare Tunnel langsung dari aplikasi. Ketika Codespace berhenti, tekan Nyalakan; server dan tunnel akan ikut hidup saat container mulai.",
+                "Nyalakan Codespace dan Cloudflare Tunnel tanpa membuka situs GitHub. Login GitHub cukup sekali; saat Codespace mulai, server dan Tunnel ikut berjalan.",
                 14, 0xFFC0CEC5, false
         ), margin(0, 0, 0, 18));
 
@@ -130,7 +131,7 @@ public final class MainActivity extends Activity {
         page.addView(connectButton, margin(0, 14, 0, 8));
         connectButton.setOnClickListener(view -> beginDeviceLogin());
 
-        startButton = button("▶  Nyalakan Codespace", 0xFF72C982, 0xFF83C88E, 0xFF102015);
+        startButton = button("▶  Nyalakan Codespace + Cloudflare", 0xFF72C982, 0xFF83C88E, 0xFF102015);
         page.addView(startButton, margin(0, 0, 0, 8));
         startButton.setOnClickListener(view -> confirmAndStart());
 
@@ -166,6 +167,11 @@ public final class MainActivity extends Activity {
         page.addView(serverActions, margin(0, 0, 0, 12));
         startServerButton.setOnClickListener(view -> sendControl("start", startServerButton));
         stopServerButton.setOnClickListener(view -> confirmStopServer());
+
+        startCloudflareButton = button("☁  Nyalakan Cloudflare Tunnel", 0xFF20362B, 0xFF3B5949, 0xFFEEF4ED);
+        page.addView(startCloudflareButton, margin(0, 0, 0, 12));
+        startCloudflareButton.setOnClickListener(view ->
+                sendControl("cloudflare-start", startCloudflareButton));
 
         page.addView(text("Pengumuman", 14, 0xFFEEF4ED, true), margin(0, 0, 0, 6));
         LinearLayout broadcastRow = new LinearLayout(this);
@@ -276,7 +282,7 @@ public final class MainActivity extends Activity {
                     saveEncryptedToken(accessToken);
                     runOnUiThread(() -> {
                         setBusy(false);
-                        setStatus("GitHub terhubung. Tekan Nyalakan Codespace.", 0xFF9CE0A7);
+                        setStatus("GitHub terhubung. Tekan Nyalakan Codespace + Cloudflare.", 0xFF9CE0A7);
                     });
                     return;
                 }
@@ -311,8 +317,8 @@ public final class MainActivity extends Activity {
             return;
         }
         new AlertDialog.Builder(this)
-                .setTitle("Nyalakan Codespace?")
-                .setMessage("GitHub akan menyalakan Codespace “" + codespaceName + "”. Selama aktif, penggunaan compute dapat ditagihkan sesuai kuota dan billing akunmu.")
+                .setTitle("Nyalakan Codespace + Cloudflare?")
+                .setMessage("Aplikasi akan meminta GitHub menyalakan Codespace melalui API tanpa membuka situs GitHub. Startup Codespace menjalankan server dan Cloudflare Tunnel otomatis, lalu aplikasi menunggu panel siap. Selama aktif, penggunaan compute dapat ditagihkan sesuai kuota dan billing akunmu.")
                 .setPositiveButton("Nyalakan", (dialog, which) -> startCodespace(codespaceName))
                 .setNegativeButton("Batal", null)
                 .show();
@@ -385,7 +391,7 @@ public final class MainActivity extends Activity {
                     Thread.sleep(5000L);
                 }
                 if (!panelReady) {
-                    throw new IllegalStateException("Codespace aktif, tetapi panel belum terjangkau. Tunggu sebentar lalu ketuk Perbarui status.");
+                    throw new IllegalStateException("Codespace aktif, tetapi Cloudflare Tunnel/panel belum terjangkau. Periksa log Codespace. Ketuk Nyalakan Codespace + Cloudflare lagi untuk mencoba.");
                 }
                 runOnUiThread(() -> {
                     setBusy(false);
@@ -928,10 +934,11 @@ public final class MainActivity extends Activity {
         busy = value;
         connectButton.setEnabled(!value);
         startButton.setEnabled(!value);
+        startCloudflareButton.setEnabled(!value);
         connectButton.setText(value ? "Sedang diproses…" : getEncryptedToken().isEmpty()
                 ? "Hubungkan GitHub (device login)"
                 : "GitHub tersambung · login ulang");
-        startButton.setText(value ? "Menunggu GitHub…" : "▶  Nyalakan Codespace");
+        startButton.setText(value ? "Menyalakan Codespace + Tunnel…" : "▶  Nyalakan Codespace + Cloudflare");
     }
 
     private TextView text(String value, int size, int color, boolean bold) {

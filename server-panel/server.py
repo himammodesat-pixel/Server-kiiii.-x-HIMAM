@@ -233,6 +233,7 @@ class Handler(BaseHTTPRequestHandler):
         scripts = {
             "start": (ROOT / "start-server-background.sh", 45),
             "stop": (ROOT / "stop-server.sh", 150),
+            "cloudflare-start": (ROOT / "cloudflare-start.sh", 45),
         }
         if action not in scripts:
             self.respond(400, {"error": "Aksi tidak dikenal."})

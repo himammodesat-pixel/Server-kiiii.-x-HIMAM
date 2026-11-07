@@ -90,10 +90,17 @@ The build requires JDK 17 or newer and Android SDK Platform 36. The APK is
 written to `android-panel/app/build/outputs/apk/debug/app-debug.apk`. This is a
 debug-signed APK for personal installation, not Play Store distribution.
 After installing, choose **Hubungkan GitHub** once and approve the device
-code. The encrypted login is reused on later launches; choose **GitHub
+code. The encrypted login is reused on later launches; no GitHub website is
+needed for normal Codespace starts. Choose **GitHub
 tersambung · login ulang** only if you intentionally need to reconnect. Then
-press **Nyalakan Codespace**. GitHub may ask for confirmation, and the
-Codespace consumes billable compute while running. Enter the panel access
+press **Nyalakan Codespace + Cloudflare**. The app calls the GitHub Codespaces
+API, then waits for the Codespace startup hook to start the server, panel, and
+Cloudflare Tunnel. The **Nyalakan Cloudflare Tunnel** button can start the
+Tunnel remotely while the panel endpoint is reachable. If the Tunnel itself
+is offline and the button cannot connect, use **Nyalakan Codespace +
+Cloudflare** to start/wake the Codespace; its startup hook reconnects the
+Tunnel. GitHub may ask for confirmation, and the Codespace consumes billable
+compute while running. Enter the panel access
 code once in the app; it is stored encrypted on that Android device. The app
 then waits for the Codespace, Paper, and Cloudflare Tunnel and provides
 native server-status, start/stop, broadcast, moderation, and console controls.
