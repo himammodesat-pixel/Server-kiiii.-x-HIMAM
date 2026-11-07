@@ -62,7 +62,13 @@ app can start the Codespace, wait for the control panel's Cloudflare Tunnel to
 return, and control the server directly in the app. It does not open or require
 a Codespaces panel link. The user enters the random panel access code once;
 the app encrypts it using Android Keystore. The GitHub access token is also
-encrypted. The OAuth Client ID is public app configuration, not a secret.
+encrypted and saved in the app's private storage, so normal app restarts and
+updates do not require another device login. The Android Keystore key does not
+require periodic user authentication. GitHub controls whether its token stays
+valid: revoking the OAuth grant, clearing app data, uninstalling the app, or
+changing devices can require login again. The app preserves a saved token when
+GitHub denies Codespaces access, so permission errors do not automatically
+erase it. The OAuth Client ID is public app configuration, not a secret.
 Never put an OAuth client secret, GitHub token, or Cloudflare token in the APK.
 
 Create a GitHub OAuth App under **Settings → Developer settings → OAuth Apps**.
@@ -83,11 +89,13 @@ cd android-panel
 The build requires JDK 17 or newer and Android SDK Platform 36. The APK is
 written to `android-panel/app/build/outputs/apk/debug/app-debug.apk`. This is a
 debug-signed APK for personal installation, not Play Store distribution.
-After installing, choose **Hubungkan GitHub**, approve the one-time device
-code, and press **Nyalakan Codespace**. GitHub may ask for confirmation, and
-the Codespace consumes billable compute while running. Enter the panel access
-code once in the app; it is stored encrypted on that Android device. The
-app then waits for the Codespace, Paper, and Cloudflare Tunnel and provides
+After installing, choose **Hubungkan GitHub** once and approve the device
+code. The encrypted login is reused on later launches; choose **GitHub
+tersambung · login ulang** only if you intentionally need to reconnect. Then
+press **Nyalakan Codespace**. GitHub may ask for confirmation, and the
+Codespace consumes billable compute while running. Enter the panel access
+code once in the app; it is stored encrypted on that Android device. The app
+then waits for the Codespace, Paper, and Cloudflare Tunnel and provides
 native server-status, start/stop, broadcast, moderation, and console controls.
 
 Starting a stopped Codespace does not guarantee that its web services are

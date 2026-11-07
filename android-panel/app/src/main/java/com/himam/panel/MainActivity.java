@@ -210,7 +210,7 @@ public final class MainActivity extends Activity {
         ), margin(0, 0, 0, 18));
 
         TextView info = text(
-                "Login memakai GitHub Device Flow dengan izin Codespaces. Token disimpan terenkripsi di Android Keystore. Jangan bagikan kode login. Codespace berhenti saat timeout GitHub; batas hidup GitHub tetap berlaku. Cloudflare Tunnel juga offline saat Codespace berhenti.",
+                "Login GitHub disimpan terenkripsi di penyimpanan privat aplikasi dan Android Keystore, sehingga tidak perlu login ulang setiap kali membuka aplikasi. Token tetap berlaku selama GitHub tidak mencabutnya dan data aplikasi tidak dihapus. Jangan bagikan kode login. Batas hidup Codespaces GitHub tetap berlaku.",
                 12, 0xFF9AABA1, false
         );
         page.addView(info);
@@ -331,9 +331,12 @@ public final class MainActivity extends Activity {
                 String encodedName = URLEncoder.encode(name, StandardCharsets.UTF_8.name()).replace("+", "%20");
                 String endpoint = API_URL + "/user/codespaces/" + encodedName;
                 ApiResponse response = githubRequest(endpoint + "/start", "POST", token, "{}");
-                if (response.statusCode == 401 || response.statusCode == 403) {
+                if (response.statusCode == 401) {
                     clearEncryptedToken();
-                    throw new IllegalStateException("GitHub menolak izin Codespaces. Hubungkan ulang GitHub dan pastikan OAuth app meminta izin codespace.");
+                    throw new IllegalStateException("Sesi GitHub tidak valid atau sudah dicabut. Hubungkan GitHub lagi.");
+                }
+                if (response.statusCode == 403) {
+                    throw new IllegalStateException("GitHub menolak izin Codespaces. Token tetap tersimpan; periksa izin codespace dan akses akun.");
                 }
                 if (response.statusCode < 200 || response.statusCode >= 300) {
                     throw apiError(response);
@@ -343,9 +346,12 @@ public final class MainActivity extends Activity {
                 String state = "";
                 while (System.currentTimeMillis() < deadline) {
                     ApiResponse statusResponse = githubRequest(endpoint, "GET", token, null);
-                    if (statusResponse.statusCode == 401 || statusResponse.statusCode == 403) {
+                    if (statusResponse.statusCode == 401) {
                         clearEncryptedToken();
-                        throw new IllegalStateException("Sesi GitHub perlu dihubungkan ulang.");
+                        throw new IllegalStateException("Sesi GitHub tidak valid atau sudah dicabut. Hubungkan GitHub lagi.");
+                    }
+                    if (statusResponse.statusCode == 403) {
+                        throw new IllegalStateException("GitHub menolak akses Codespaces. Token tetap tersimpan; periksa izin dan akses akun.");
                     }
                     if (statusResponse.statusCode < 200 || statusResponse.statusCode >= 300) {
                         throw apiError(statusResponse);
@@ -857,7 +863,9 @@ public final class MainActivity extends Activity {
         ByteBuffer combined = ByteBuffer.allocate(1 + iv.length + ciphertext.length);
         combined.put((byte) iv.length).put(iv).put(ciphertext);
         String encrypted = Base64.encodeToString(combined.array(), Base64.NO_WRAP);
-        getPreferences(MODE_PRIVATE).edit().putString(TOKEN_KEY, encrypted).apply();
+        if (!getPreferences(MODE_PRIVATE).edit().putString(TOKEN_KEY, encrypted).commit()) {
+            throw new IllegalStateException("Token GitHub tidak dapat disimpan ke penyimpanan aplikasi.");
+        }
     }
 
     private String getEncryptedToken() {
@@ -903,8 +911,10 @@ public final class MainActivity extends Activity {
 
     private void refreshConnectionStatus() {
         if (getEncryptedToken().isEmpty()) {
+            connectButton.setText("Hubungkan GitHub (device login)");
             setStatus("Belum terhubung ke GitHub. Client ID perlu dikonfigurasi di APK.", 0xFFFFD37A);
         } else {
+            connectButton.setText("GitHub tersambung · login ulang");
             setStatus("GitHub sudah terhubung. Siap menyalakan Codespace.", 0xFF9CE0A7);
         }
     }
@@ -918,7 +928,9 @@ public final class MainActivity extends Activity {
         busy = value;
         connectButton.setEnabled(!value);
         startButton.setEnabled(!value);
-        connectButton.setText(value ? "Sedang diproses…" : "Hubungkan GitHub (device login)");
+        connectButton.setText(value ? "Sedang diproses…" : getEncryptedToken().isEmpty()
+                ? "Hubungkan GitHub (device login)"
+                : "GitHub tersambung · login ulang");
         startButton.setText(value ? "Menunggu GitHub…" : "▶  Nyalakan Codespace");
     }
 
