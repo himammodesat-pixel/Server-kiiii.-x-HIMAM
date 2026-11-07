@@ -110,6 +110,14 @@ code once in the app; it is stored encrypted on that Android device. The app
 then waits for the Codespace, Paper, and Cloudflare Tunnel and provides
 native server-status, start/stop, broadcast, moderation, and console controls.
 
+Android **v1.1.0** adds a native dashboard and **Jelajahi repository**. The
+repository browser reads the public `main` branch without additional GitHub
+permissions, lets you navigate folders and read UTF-8 files up to 2 MB, and
+opens larger or binary files on GitHub. Browsing is read-only and cannot
+expose account secrets or private repositories. Use **Codespace / Copilot** to
+open Codespaces and Copilot in GitHub; AI access follows the signed-in GitHub
+account's entitlements.
+
 Starting a stopped Codespace does not guarantee that its web services are
 already ready at the instant GitHub reports it as available. Device network,
 GitHub authorization, Codespaces availability, Android background limits, and

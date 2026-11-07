@@ -28,6 +28,7 @@ import android.widget.ArrayAdapter;
 import androidx.browser.customtabs.CustomTabsIntent;
 
 import org.json.JSONObject;
+import org.json.JSONArray;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -35,6 +36,8 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.net.URI;
+import java.nio.charset.CodingErrorAction;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
@@ -56,6 +59,10 @@ public final class MainActivity extends Activity {
     private static final String DEVICE_CODE_URL = "https://github.com/login/device/code";
     private static final String ACCESS_TOKEN_URL = "https://github.com/login/oauth/access_token";
     private static final String API_URL = "https://api.github.com";
+    private static final String REPOSITORY_OWNER = "himammodesat-pixel";
+    private static final String REPOSITORY_NAME = "Server-kiiii.-x-HIMAM";
+    private static final String REPOSITORY_API_URL = API_URL + "/repos/"
+            + REPOSITORY_OWNER + "/" + REPOSITORY_NAME;
     private static final String OAUTH_SCOPE = "codespace";
     private static final Pattern CODESPACE_NAME_PATTERN =
             Pattern.compile("^[a-zA-Z0-9-]{3,100}$");
@@ -77,6 +84,7 @@ public final class MainActivity extends Activity {
     private Button startServerButton;
     private Button stopServerButton;
     private Button startCloudflareButton;
+    private Button repositoryButton;
     private Button broadcastButton;
     private Button playerActionButton;
     private Button commandButton;
@@ -90,55 +98,68 @@ public final class MainActivity extends Activity {
 
         LinearLayout page = new LinearLayout(this);
         page.setOrientation(LinearLayout.VERTICAL);
-        page.setPadding(dp(24), dp(28), dp(24), dp(24));
-        page.setBackgroundColor(Color.rgb(16, 26, 23));
+        page.setPadding(dp(20), dp(24), dp(20), dp(24));
+        page.setBackgroundColor(Color.rgb(11, 17, 32));
 
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
         scroll.addView(page);
         setContentView(scroll);
 
-        TextView eyebrow = text("MINECRAFT SERVER", 12, 0xFF91B69D, true);
+        TextView eyebrow = text("HIMAM SMP  ·  SERVER CONTROL", 11, 0xFF83B3FF, true);
         eyebrow.setLetterSpacing(0.12f);
         page.addView(eyebrow);
-        page.addView(text("HIMAM SMP", 30, 0xFFEEF4ED, true), margin(0, 5, 0, 8));
+        page.addView(text("Server Console", 27, 0xFFEAF0FA, true), margin(0, 5, 0, 8));
         page.addView(text(
-                "Nyalakan Codespace dan Cloudflare Tunnel tanpa membuka situs GitHub. Login GitHub cukup sekali; saat Codespace mulai, server dan Tunnel ikut berjalan.",
-                14, 0xFFC0CEC5, false
+                "Kontrol Codespace, Cloudflare, file server, dan repository GitHub dari satu dashboard.",
+                13, 0xFFA4B1C6, false
         ), margin(0, 0, 0, 18));
 
-        status = text("Periksa koneksi GitHub.", 14, 0xFF9AABA1, false);
-        status.setPadding(dp(13), dp(12), dp(13), dp(12));
-        status.setBackground(rounded(0xFF172720, 0xFF2D4439, 12));
+        status = text("Periksa koneksi GitHub.", 14, 0xFFB6C1D1, true);
+        status.setPadding(dp(15), dp(14), dp(15), dp(14));
+        status.setBackground(rounded(0xFF151F30, 0xFF2B3A52, 10));
         page.addView(status, margin(0, 0, 0, 16));
 
-        TextView label = text("Nama Codespace", 14, 0xFFEEF4ED, true);
+        TextView label = text("CODESPACE", 10, 0xFF91A0B6, true);
+        label.setLetterSpacing(0.1f);
         page.addView(label, margin(0, 0, 0, 8));
         codespaceInput = new EditText(this);
         codespaceInput.setSingleLine(true);
         codespaceInput.setTextSize(14);
-        codespaceInput.setTextColor(Color.rgb(238, 244, 237));
-        codespaceInput.setHintTextColor(Color.rgb(132, 151, 139));
+        codespaceInput.setTextColor(Color.rgb(234, 240, 250));
+        codespaceInput.setHintTextColor(Color.rgb(132, 145, 167));
         codespaceInput.setHint("nama-codespace");
         codespaceInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
         codespaceInput.setAutofillHints();
         codespaceInput.setPadding(dp(14), dp(12), dp(14), dp(12));
-        codespaceInput.setBackground(rounded(0xFF0E1713, 0xFF3B5949, 10));
+        codespaceInput.setBackground(rounded(0xFF0C1320, 0xFF2C3B54, 8));
         page.addView(codespaceInput, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(50)));
 
-        connectButton = button("Hubungkan GitHub (device login)", 0xFF20362B, 0xFF3B5949, 0xFFEEF4ED);
+        connectButton = button("Hubungkan GitHub (device login)", 0xFF202B40, 0xFF364761, 0xFFEAF0FA);
         page.addView(connectButton, margin(0, 14, 0, 8));
         connectButton.setOnClickListener(view -> beginDeviceLogin());
 
-        startButton = button("▶  Nyalakan Codespace + Cloudflare", 0xFF72C982, 0xFF83C88E, 0xFF102015);
+        startButton = button("▶  Nyalakan Codespace + Cloudflare", 0xFF168A4B, 0xFF31A960, Color.WHITE);
         page.addView(startButton, margin(0, 0, 0, 8));
         startButton.setOnClickListener(view -> confirmAndStart());
 
-        page.addView(text("KONTROL SERVER", 12, 0xFF91B69D, true), margin(0, 12, 0, 8));
-        panelStatus = text("Simpan kode panel untuk melihat status.", 13, 0xFF9AABA1, false);
+        LinearLayout githubActions = new LinearLayout(this);
+        githubActions.setOrientation(LinearLayout.HORIZONTAL);
+        repositoryButton = button("⌂  Jelajahi repository", 0xFF202B40, 0xFF364761, 0xFFEAF0FA);
+        Button copilotButton = button("✦  Codespace / Copilot", 0xFF202B40, 0xFF364761, 0xFFEAF0FA);
+        githubActions.addView(repositoryButton, new LinearLayout.LayoutParams(0, dp(48), 1f));
+        LinearLayout.LayoutParams copilotParams = new LinearLayout.LayoutParams(0, dp(48), 1f);
+        copilotParams.setMargins(dp(8), 0, 0, 0);
+        githubActions.addView(copilotButton, copilotParams);
+        page.addView(githubActions, margin(0, 0, 0, 18));
+        repositoryButton.setOnClickListener(view -> browseRepository(""));
+        copilotButton.setOnClickListener(view -> openUrl("https://github.com/codespaces"));
+
+        page.addView(text("SERVER MANAGEMENT", 10, 0xFF91A0B6, true), margin(0, 4, 0, 8));
+        panelStatus = text("Simpan kode panel untuk melihat status.", 13, 0xFFB6C1D1, false);
         panelStatus.setPadding(dp(13), dp(12), dp(13), dp(12));
-        panelStatus.setBackground(rounded(0xFF172720, 0xFF2D4439, 12));
+        panelStatus.setBackground(rounded(0xFF151F30, 0xFF2B3A52, 10));
         page.addView(panelStatus, margin(0, 0, 0, 10));
 
         LinearLayout tokenRow = new LinearLayout(this);
@@ -146,20 +167,20 @@ public final class MainActivity extends Activity {
         tokenRow.setGravity(android.view.Gravity.CENTER_VERTICAL);
         panelTokenInput = editText("Kode panel (dimasukkan sekali)", true);
         tokenRow.addView(panelTokenInput, new LinearLayout.LayoutParams(0, dp(50), 1f));
-        savePanelTokenButton = button("Simpan", 0xFF20362B, 0xFF3B5949, 0xFFEEF4ED);
+        savePanelTokenButton = button("Simpan", 0xFF202B40, 0xFF364761, 0xFFEAF0FA);
         tokenRow.addView(savePanelTokenButton, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, dp(50)));
         page.addView(tokenRow, margin(0, 0, 0, 8));
         savePanelTokenButton.setOnClickListener(view -> savePanelAccessCode());
 
-        refreshButton = button("↻  Perbarui status", 0xFF20362B, 0xFF3B5949, 0xFFEEF4ED);
+        refreshButton = button("↻  Perbarui status", 0xFF202B40, 0xFF364761, 0xFFEAF0FA);
         page.addView(refreshButton, margin(0, 0, 0, 8));
         refreshButton.setOnClickListener(view -> refreshPanelStatus());
 
         LinearLayout serverActions = new LinearLayout(this);
         serverActions.setOrientation(LinearLayout.HORIZONTAL);
-        startServerButton = button("▶  Start server", 0xFF72C982, 0xFF83C88E, 0xFF102015);
-        stopServerButton = button("■  Stop server", 0xFF382723, 0xFF654540, 0xFFFFD2CA);
+        startServerButton = button("▶  Start server", 0xFF168A4B, 0xFF31A960, Color.WHITE);
+        stopServerButton = button("■  Stop server", 0xFF7D2939, 0xFFA44453, 0xFFFFF0F2);
         serverActions.addView(startServerButton, new LinearLayout.LayoutParams(0, dp(50), 1f));
         LinearLayout.LayoutParams stopParams = new LinearLayout.LayoutParams(0, dp(50), 1f);
         stopParams.setMargins(dp(8), 0, 0, 0);
@@ -168,23 +189,23 @@ public final class MainActivity extends Activity {
         startServerButton.setOnClickListener(view -> sendControl("start", startServerButton));
         stopServerButton.setOnClickListener(view -> confirmStopServer());
 
-        startCloudflareButton = button("☁  Nyalakan Cloudflare Tunnel", 0xFF20362B, 0xFF3B5949, 0xFFEEF4ED);
+        startCloudflareButton = button("☁  Nyalakan Cloudflare Tunnel", 0xFF202B40, 0xFF364761, 0xFFEAF0FA);
         page.addView(startCloudflareButton, margin(0, 0, 0, 12));
         startCloudflareButton.setOnClickListener(view ->
                 sendControl("cloudflare-start", startCloudflareButton));
 
-        page.addView(text("Pengumuman", 14, 0xFFEEF4ED, true), margin(0, 0, 0, 6));
+        page.addView(text("PLAYER MANAGEMENT", 10, 0xFF91A0B6, true), margin(0, 8, 0, 8));
         LinearLayout broadcastRow = new LinearLayout(this);
         broadcastRow.setOrientation(LinearLayout.HORIZONTAL);
         broadcastInput = editText("Pesan untuk semua pemain", false);
         broadcastRow.addView(broadcastInput, new LinearLayout.LayoutParams(0, dp(50), 1f));
-        broadcastButton = button("Kirim", 0xFF20362B, 0xFF3B5949, 0xFFEEF4ED);
+        broadcastButton = button("Kirim", 0xFF202B40, 0xFF364761, 0xFFEAF0FA);
         broadcastRow.addView(broadcastButton, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, dp(50)));
         page.addView(broadcastRow, margin(0, 0, 0, 12));
         broadcastButton.setOnClickListener(view -> sendBroadcast());
 
-        page.addView(text("Moderasi pemain", 14, 0xFFEEF4ED, true), margin(0, 0, 0, 6));
+        page.addView(text("Moderasi & whitelist", 13, 0xFFEAF0FA, true), margin(0, 0, 0, 6));
         playerInput = editText("Nama pemain", false);
         page.addView(playerInput, margin(0, 0, 0, 8));
         playerActionInput = new Spinner(this);
@@ -196,16 +217,16 @@ public final class MainActivity extends Activity {
         page.addView(playerActionInput, margin(0, 0, 0, 8));
         reasonInput = editText("Alasan (opsional)", false);
         page.addView(reasonInput, margin(0, 0, 0, 8));
-        playerActionButton = button("Jalankan aksi pemain", 0xFF20362B, 0xFF3B5949, 0xFFEEF4ED);
+        playerActionButton = button("Jalankan aksi pemain", 0xFF202B40, 0xFF364761, 0xFFEAF0FA);
         page.addView(playerActionButton, margin(0, 0, 0, 12));
         playerActionButton.setOnClickListener(view -> moderatePlayer());
 
-        page.addView(text("Console Minecraft", 14, 0xFFEEF4ED, true), margin(0, 0, 0, 6));
+        page.addView(text("MINECRAFT CONSOLE", 10, 0xFF91A0B6, true), margin(0, 0, 0, 6));
         LinearLayout commandRow = new LinearLayout(this);
         commandRow.setOrientation(LinearLayout.HORIZONTAL);
         commandInput = editText("Contoh: time set day", false);
         commandRow.addView(commandInput, new LinearLayout.LayoutParams(0, dp(50), 1f));
-        commandButton = button("Kirim", 0xFF20362B, 0xFF3B5949, 0xFFEEF4ED);
+        commandButton = button("Kirim", 0xFF202B40, 0xFF364761, 0xFFEAF0FA);
         commandRow.addView(commandButton, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, dp(50)));
         page.addView(commandRow, margin(0, 0, 0, 8));
@@ -422,6 +443,323 @@ public final class MainActivity extends Activity {
                 Toast.makeText(this, "Tidak ada browser yang bisa membuka tautan.", Toast.LENGTH_LONG).show();
             }
         }
+    }
+
+    private void browseRepository(String path) {
+        AlertDialog loading = new AlertDialog.Builder(this)
+                .setTitle("Repository GitHub")
+                .setMessage(path.isEmpty() ? "Memuat daftar file repository…" : "Memuat " + path + "…")
+                .setNegativeButton("Batal", null)
+                .create();
+        loading.show();
+        executor.execute(() -> {
+            try {
+                String endpoint = REPOSITORY_API_URL + "/contents"
+                        + (path.isEmpty() ? "" : "/" + encodeRepositoryPath(path))
+                        + "?ref=main";
+                Object result = publicGitHubRequest(endpoint);
+                JSONArray entries;
+                if (result instanceof JSONArray) {
+                    entries = (JSONArray) result;
+                } else {
+                    throw new IllegalStateException("GitHub tidak mengembalikan daftar folder.");
+                }
+                runOnUiThread(() -> {
+                    if (loading.isShowing()) {
+                        loading.dismiss();
+                    }
+                    showRepositoryDirectory(path, entries);
+                });
+            } catch (Exception error) {
+                runOnUiThread(() -> {
+                    if (loading.isShowing()) {
+                        loading.dismiss();
+                    }
+                    showRepositoryError(path, error.getMessage(), false);
+                });
+            }
+        });
+    }
+
+    private void showRepositoryDirectory(String path, JSONArray entries) {
+        String[] labels = new String[entries.length()];
+        for (int index = 0; index < entries.length(); index++) {
+            JSONObject entry = entries.optJSONObject(index);
+            if (entry == null) {
+                labels[index] = "Item repository";
+                continue;
+            }
+            String type = entry.optString("type", "");
+            String name = entry.optString("name", entry.optString("path", "file"));
+            labels[index] = ("dir".equals(type) ? "▰  " : "▤  ") + name;
+        }
+
+        String title = path.isEmpty() ? REPOSITORY_OWNER + "/" + REPOSITORY_NAME
+                : REPOSITORY_NAME + "/" + path;
+        AlertDialog.Builder builder = new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setItems(labels, (dialog, which) -> {
+                    JSONObject entry = entries.optJSONObject(which);
+                    if (entry == null) {
+                        showRepositoryError(path, "Item repository tidak valid.", false);
+                        return;
+                    }
+                    String itemPath = entry.optString("path", "");
+                    if ("dir".equals(entry.optString("type", ""))) {
+                        browseRepository(itemPath);
+                    } else if ("file".equals(entry.optString("type", ""))) {
+                        showRepositoryFile(entry);
+                    } else {
+                        showRepositoryError(itemPath, "Jenis item ini belum didukung.", false);
+                    }
+                })
+                .setNeutralButton("Buka di GitHub", (dialog, which) -> {
+                    String suffix = path.isEmpty() ? "" : "/tree/main/" + encodeRepositoryPath(path);
+                    openUrl("https://github.com/" + REPOSITORY_OWNER + "/" + REPOSITORY_NAME + suffix);
+                });
+        if (path.isEmpty()) {
+            builder.setNegativeButton("Tutup", null);
+        } else {
+            String parent = path.contains("/")
+                    ? path.substring(0, path.lastIndexOf('/'))
+                    : "";
+            builder.setNegativeButton("Kembali", (dialog, which) -> browseRepository(parent));
+        }
+        builder.show();
+    }
+
+    private void showRepositoryFile(JSONObject entry) {
+        String path = entry.optString("path", "");
+        String name = entry.optString("name", path);
+        int size = entry.optInt("size", 0);
+        showRepositoryFile(path, name, size);
+    }
+
+    private void showRepositoryFile(String path, String name, int size) {
+        if (size > 2_000_000) {
+            new AlertDialog.Builder(this)
+                    .setTitle(name)
+                    .setMessage("File berukuran " + formatFileSize(size)
+                            + ". Buka di GitHub untuk melihat file besar atau biner.")
+                    .setPositiveButton("Buka file di GitHub", (dialog, which) ->
+                            openUrl("https://github.com/" + REPOSITORY_OWNER + "/" + REPOSITORY_NAME
+                                    + "/blob/main/" + encodeRepositoryPath(path)))
+                    .setNegativeButton("Tutup", null)
+                    .show();
+            return;
+        }
+
+        AlertDialog loading = new AlertDialog.Builder(this)
+                .setTitle(name)
+                .setMessage("Mengambil isi file dari GitHub…")
+                .setNegativeButton("Batal", null)
+                .create();
+        loading.show();
+        executor.execute(() -> {
+            try {
+                String endpoint = REPOSITORY_API_URL + "/contents/"
+                        + encodeRepositoryPath(path) + "?ref=main";
+                Object result = publicGitHubRequest(endpoint);
+                if (!(result instanceof JSONObject)) {
+                    throw new IllegalStateException("GitHub tidak mengembalikan isi file.");
+                }
+                JSONObject file = (JSONObject) result;
+                String content = file.optString("content", "").replaceAll("\\s", "");
+                byte[] bytes;
+                if ("base64".equalsIgnoreCase(file.optString("encoding", "")) && !content.isEmpty()) {
+                    bytes = Base64.decode(content, Base64.DEFAULT);
+                } else {
+                    String downloadUrl = file.optString("download_url", "");
+                    if (downloadUrl.isEmpty()) {
+                        throw new IllegalStateException("GitHub tidak menyediakan isi file ini.");
+                    }
+                    bytes = downloadPublicGitHubFile(downloadUrl);
+                }
+                String textContent = StandardCharsets.UTF_8.newDecoder()
+                        .onMalformedInput(CodingErrorAction.REPORT)
+                        .onUnmappableCharacter(CodingErrorAction.REPORT)
+                        .decode(ByteBuffer.wrap(bytes))
+                        .toString();
+                runOnUiThread(() -> {
+                    if (loading.isShowing()) {
+                        loading.dismiss();
+                    }
+                    showRepositoryFileContents(path, name, textContent);
+                });
+            } catch (Exception error) {
+                runOnUiThread(() -> {
+                    if (loading.isShowing()) {
+                        loading.dismiss();
+                    }
+                    showRepositoryError(path, error.getMessage(), true);
+                });
+            }
+        });
+    }
+
+    private void showRepositoryFileContents(String path, String name, String content) {
+        ScrollView scroll = new ScrollView(this);
+        TextView body = text(content, 12, 0xFFD2DCEC, false);
+        body.setTypeface(Typeface.MONOSPACE);
+        body.setTextIsSelectable(true);
+        body.setPadding(dp(14), dp(12), dp(14), dp(12));
+        scroll.addView(body);
+        scroll.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(440)));
+
+        new AlertDialog.Builder(this)
+                .setTitle(name)
+                .setMessage(path)
+                .setView(scroll)
+                .setPositiveButton("Buka di GitHub", (dialog, which) ->
+                        openUrl("https://github.com/" + REPOSITORY_OWNER + "/" + REPOSITORY_NAME
+                                + "/blob/main/" + encodeRepositoryPath(path)))
+                .setNegativeButton("Tutup", null)
+                .show();
+    }
+
+    private void showRepositoryError(String path, String message, boolean file) {
+        String details = message == null || message.trim().isEmpty()
+                ? "Tidak dapat membaca repository."
+                : message;
+        String githubPath = path.isEmpty() ? ""
+                : (file ? "/blob/main/" : "/tree/main/") + encodeRepositoryPath(path);
+        new AlertDialog.Builder(this)
+                .setTitle(path.isEmpty() ? "Repository GitHub" : path)
+                .setMessage(details)
+                .setPositiveButton("Coba lagi", (dialog, which) -> {
+                    if (file) {
+                        showRepositoryFile(path, path.substring(path.lastIndexOf('/') + 1), 0);
+                    } else {
+                        browseRepository(path);
+                    }
+                })
+                .setNeutralButton("Buka di GitHub", (dialog, which) ->
+                        openUrl("https://github.com/" + REPOSITORY_OWNER + "/" + REPOSITORY_NAME
+                                + githubPath))
+                .setNegativeButton("Tutup", null)
+                .show();
+    }
+
+    private Object publicGitHubRequest(String endpoint) throws Exception {
+        HttpURLConnection connection = (HttpURLConnection) new URL(endpoint).openConnection();
+        try {
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(15_000);
+            connection.setReadTimeout(20_000);
+            connection.setRequestProperty("Accept", "application/vnd.github+json");
+            connection.setRequestProperty("X-GitHub-Api-Version", "2022-11-28");
+            connection.setRequestProperty("User-Agent", "HIMAM-SMP-Panel/" + BuildConfig.VERSION_NAME);
+            String savedToken = getEncryptedToken();
+            if (!savedToken.isEmpty()) {
+                connection.setRequestProperty("Authorization", "Bearer " + savedToken);
+            }
+            int statusCode = connection.getResponseCode();
+            InputStream input = statusCode >= 400 ? connection.getErrorStream() : connection.getInputStream();
+            String response = readLimitedText(input, 5_000_000);
+            if (statusCode < 200 || statusCode >= 300) {
+                String message = "GitHub API mengembalikan HTTP " + statusCode;
+                try {
+                    message = new JSONObject(response).optString("message", message);
+                } catch (Exception ignored) {
+                    if (!response.trim().isEmpty()) {
+                        message += ": " + response.trim();
+                    }
+                }
+                if (statusCode == 403 || statusCode == 429) {
+                    message += " (batas permintaan GitHub publik dapat habis; coba lagi nanti)";
+                }
+                throw new IllegalStateException(message);
+            }
+            String trimmed = response.trim();
+            if (trimmed.startsWith("[")) {
+                return new JSONArray(trimmed);
+            }
+            if (trimmed.startsWith("{")) {
+                return new JSONObject(trimmed);
+            }
+            throw new IllegalStateException("Respons GitHub tidak valid.");
+        } finally {
+            connection.disconnect();
+        }
+    }
+
+    private byte[] downloadPublicGitHubFile(String address) throws Exception {
+        URI uri = URI.create(address);
+        if (!"https".equalsIgnoreCase(uri.getScheme())
+                || !"raw.githubusercontent.com".equalsIgnoreCase(uri.getHost())) {
+            throw new IllegalStateException("Alamat file GitHub tidak aman.");
+        }
+        HttpURLConnection connection = (HttpURLConnection) new URL(address).openConnection();
+        try {
+            connection.setConnectTimeout(15_000);
+            connection.setReadTimeout(20_000);
+            connection.setRequestProperty("User-Agent", "HIMAM-SMP-Panel/" + BuildConfig.VERSION_NAME);
+            int statusCode = connection.getResponseCode();
+            if (statusCode < 200 || statusCode >= 300) {
+                throw new IllegalStateException("Unduhan file GitHub gagal (HTTP " + statusCode + ").");
+            }
+            byte[] data;
+            try (InputStream input = connection.getInputStream();
+                 ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+                byte[] buffer = new byte[8192];
+                int count;
+                while ((count = input.read(buffer)) != -1) {
+                    if (output.size() + count > 2_000_000) {
+                        throw new IllegalStateException("File lebih dari 2 MB; buka langsung di GitHub.");
+                    }
+                    output.write(buffer, 0, count);
+                }
+                data = output.toByteArray();
+            }
+            return data;
+        } finally {
+            connection.disconnect();
+        }
+    }
+
+    private String readLimitedText(InputStream input, int maximumBytes) throws Exception {
+        if (input == null) {
+            return "";
+        }
+        try (InputStream stream = input; ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            byte[] buffer = new byte[8192];
+            int count;
+            while ((count = stream.read(buffer)) != -1) {
+                if (output.size() + count > maximumBytes) {
+                    throw new IllegalStateException("Respons GitHub terlalu besar.");
+                }
+                output.write(buffer, 0, count);
+            }
+            return output.toString(StandardCharsets.UTF_8.name());
+        }
+    }
+
+    private String encodeRepositoryPath(String path) {
+        String[] parts = path.split("/");
+        StringBuilder encoded = new StringBuilder();
+        for (String part : parts) {
+            if (encoded.length() > 0) {
+                encoded.append('/');
+            }
+            try {
+                encoded.append(URLEncoder.encode(part, StandardCharsets.UTF_8.name())
+                        .replace("+", "%20"));
+            } catch (Exception error) {
+                throw new IllegalStateException("Jalur repository tidak valid.", error);
+            }
+        }
+        return encoded.toString();
+    }
+
+    private String formatFileSize(int bytes) {
+        if (bytes < 1024) {
+            return bytes + " B";
+        }
+        if (bytes < 1024 * 1024) {
+            return String.format(java.util.Locale.ROOT, "%.1f KB", bytes / 1024.0);
+        }
+        return String.format(java.util.Locale.ROOT, "%.1f MB", bytes / (1024.0 * 1024.0));
     }
 
     private EditText editText(String hint, boolean password) {
@@ -812,7 +1150,7 @@ public final class MainActivity extends Activity {
             connection.setReadTimeout(20_000);
             connection.setRequestProperty("Accept", "application/vnd.github+json");
             connection.setRequestProperty("X-GitHub-Api-Version", "2022-11-28");
-            connection.setRequestProperty("User-Agent", "HIMAM-SMP-Panel/1.0.1");
+            connection.setRequestProperty("User-Agent", "HIMAM-SMP-Panel/" + BuildConfig.VERSION_NAME);
             connection.setRequestProperty("Authorization", "Bearer " + token);
             if (body != null) {
                 connection.setRequestProperty("Content-Type", "application/json");
