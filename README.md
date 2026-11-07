@@ -144,6 +144,12 @@ Tunnel logs go to `logs/cloudflare-tunnel.log`. When the Codespace stops,
 `cloudflared` stops too; the hostname becomes available again after the
 Codespace and tunnel restart.
 
+To start the web panel and Cloudflare Tunnel manually, run
+`./cloudflare-start.sh`. To stop only the Tunnel while leaving the panel and
+Minecraft server running, use `./cloudflare-stop.sh`. The start command checks
+that Cloudflare registers a live tunnel connection and reports an error if it
+does not.
+
 The `.devcontainer` `postStartCommand` starts Paper, the control panel, and
 the configured tunnel whenever the container starts, including when the app
 starts a stopped Codespace through GitHub. Rebuild the container once after

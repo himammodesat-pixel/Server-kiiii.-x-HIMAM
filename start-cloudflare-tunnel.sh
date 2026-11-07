@@ -30,7 +30,7 @@ elif [[ ! -s "$CREDENTIALS_FILE" && -r "$HOME/.cloudflared/cert.pem" ]]; then
     chmod 600 "$CREDENTIALS_FILE"
 elif [[ ! -s "$CREDENTIALS_FILE" ]]; then
     printf 'Cloudflare Tunnel is not configured. Add the Codespaces secret CLOUDFLARE_TUNNEL_CREDENTIALS_B64.\n' >&2
-    exit 0
+    exit 1
 fi
 
 if [[ ! -r "$CONFIG_FILE" ]]; then
@@ -60,16 +60,26 @@ if [[ -r "$PID_FILE" ]]; then
     fi
 fi
 
+LOG_SIZE="$(wc -c <"$LOG_FILE")"
 nohup cloudflared tunnel --config "$CONFIG_FILE" --no-autoupdate run "$TUNNEL_ID" >>"$LOG_FILE" 2>&1 </dev/null &
 TUNNEL_PID=$!
 printf '%s\n' "$TUNNEL_PID" >"$PID_FILE"
 
-sleep 1
-if ! kill -0 "$TUNNEL_PID" 2>/dev/null; then
-    rm -f -- "$PID_FILE"
-    printf 'Cloudflare Tunnel exited during startup. Recent log output:\n' >&2
-    tail -n 30 "$LOG_FILE" >&2 || true
-    exit 1
-fi
+for ((attempt = 0; attempt < 30; attempt++)); do
+    if [[ ! -d "/proc/$TUNNEL_PID" ]]; then
+        rm -f -- "$PID_FILE"
+        printf 'Cloudflare Tunnel exited during startup. Recent log output:\n' >&2
+        tail -n 30 "$LOG_FILE" >&2 || true
+        exit 1
+    fi
 
-printf 'Started Cloudflare Tunnel (PID %s). Check %s for connection status.\n' "$TUNNEL_PID" "$LOG_FILE"
+    if tail -c "+$((LOG_SIZE + 1))" "$LOG_FILE" | grep -F 'Registered tunnel connection' >/dev/null; then
+        printf 'Cloudflare Tunnel is connected (PID %s).\n' "$TUNNEL_PID"
+        exit 0
+    fi
+    sleep 1
+done
+
+printf 'Cloudflare Tunnel is running (PID %s) but has not registered a connection yet. Check %s.\n' \
+    "$TUNNEL_PID" "$LOG_FILE" >&2
+exit 1

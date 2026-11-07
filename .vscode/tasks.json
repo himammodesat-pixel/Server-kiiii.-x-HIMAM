@@ -22,7 +22,16 @@
     {
       "label": "Cloudflare Tunnel",
       "type": "shell",
-      "command": "./start-cloudflare-tunnel.sh",
+      "command": "./cloudflare-start.sh",
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Stop Cloudflare Tunnel",
+      "type": "shell",
+      "command": "./cloudflare-stop.sh",
       "presentation": {
         "reveal": "silent",
         "panel": "dedicated"
