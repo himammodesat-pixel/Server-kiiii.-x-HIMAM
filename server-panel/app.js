@@ -18,10 +18,13 @@ const playerActionButton = document.querySelector("#player-action-button");
 const consoleInput = document.querySelector("#console-command");
 const consoleButton = document.querySelector("#console-button");
 
-codeInput.value = sessionStorage.getItem("panel-code") || "";
+const savedCode = localStorage.getItem("panel-code") || sessionStorage.getItem("panel-code") || "";
+if (savedCode) localStorage.setItem("panel-code", savedCode);
+sessionStorage.removeItem("panel-code");
+codeInput.value = savedCode;
 
 function token() {
-  return sessionStorage.getItem("panel-code") || "";
+  return localStorage.getItem("panel-code") || "";
 }
 
 async function request(path, options = {}) {
@@ -66,7 +69,7 @@ async function refreshStatus() {
       playerCount.textContent = status.running ? "Jumlah pemain belum tersedia" : "Tidak ada pemain online";
     }
     updatedAt.textContent = `Diperbarui ${new Date().toLocaleTimeString("id-ID")}`;
-    accessFeedback.textContent = "Kode akses diterima. Kode hanya disimpan di sesi browser ini.";
+    accessFeedback.textContent = "Kode akses diterima. Kode tersimpan di browser ini sampai dihapus.";
     accessFeedback.className = "muted success";
   } catch (error) {
     setUnavailable(error.message);
@@ -134,8 +137,9 @@ async function sendCommand(command, button, confirmation = "") {
 
 saveButton.addEventListener("click", async () => {
   const value = codeInput.value.trim();
-  if (value) sessionStorage.setItem("panel-code", value);
-  else sessionStorage.removeItem("panel-code");
+  if (value) localStorage.setItem("panel-code", value);
+  else localStorage.removeItem("panel-code");
+  sessionStorage.removeItem("panel-code");
   accessFeedback.textContent = "Memeriksa kode akses…";
   accessFeedback.className = "muted";
   await refreshStatus();

@@ -37,13 +37,19 @@ browser menu to install/add the panel to your home screen. Log in to GitHub
 when prompted.
 
 Get the panel's access code in the Codespace terminal with
-`cat .paper/server-panel-token`, then enter it in the panel. Keep this code
-private; it grants control over this server. It is stored only for the current
-browser session. The panel can start or gracefully stop Paper, but it cannot
-keep a Codespace alive past GitHub's idle timeout or maximum lifetime.
+`cat .paper/server-panel-token`, then enter it in the panel. This code has no
+expiration and remains the same across service restarts while the Codespace
+workspace file is preserved. The web panel saves it in that browser's local
+storage until removed; use this only on a trusted personal device because it
+grants control over this server. The Android app keeps its saved code encrypted
+on the device. If the Codespace workspace or token file is deleted, a new code
+will be generated and must be saved again. The panel can start or gracefully
+stop Paper, but it cannot keep a Codespace alive past GitHub's idle timeout or
+maximum lifetime.
 If the code is rejected, copy it again directly from that terminal command,
 paste it into the panel's code field without quotation marks, and press
-**Simpan**. A green “Kode akses diterima” message confirms it worked.
+**Simpan**. A green “Kode akses diterima” message confirms it worked. The
+browser panel remembers the code until you clear it or remove browser data.
 The Minecraft console can run powerful server commands; it never runs Linux
 terminal commands. Use the dedicated **Matikan** button for a graceful server
 shutdown.
