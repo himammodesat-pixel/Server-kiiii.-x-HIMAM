@@ -1,0 +1,4 @@
+chunks:
+  auto-save-interval: default
+  flush-regions-on-save: true
+  max-auto-save-chunks-per-tick: 24

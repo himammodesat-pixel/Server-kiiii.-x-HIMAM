@@ -26,6 +26,16 @@ Stop a running server safely, even if the terminal used to start it is gone:
 ./stop-server.sh
 ```
 
+Paper automatically saves all loaded worlds and player data every 1200 game
+ticks (about 60 seconds at 20 TPS). Paper also flushes region files to disk
+when each save completes; chunk saves remain rate-limited to 24 per tick to
+reduce lag spikes. If the server is running below 20 TPS, a 1200-tick interval
+takes longer than 60 seconds. Plugin-owned data follows each plugin's own
+save schedule, so it cannot be guaranteed to persist literally every change
+in real time. Use the panel's **Simpan dunia** action for an extra manual save;
+a graceful stop also saves world data and lets plugins run their shutdown
+save hooks.
+
 The Android-friendly control panel starts automatically when the workspace
 opens. It shows server status, online players, and recent logs, and provides
 start/stop/restart controls, Cloudflare Tunnel startup, broadcasts, player
