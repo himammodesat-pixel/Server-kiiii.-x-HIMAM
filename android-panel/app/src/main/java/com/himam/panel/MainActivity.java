@@ -162,9 +162,9 @@ public final class MainActivity extends Activity {
         );
         page.addView(startCloudflareButton, margin(0, 0, 0, 5));
         startCloudflareButton.setOnClickListener(view ->
-                sendControl("cloudflare-start", startCloudflareButton));
+                confirmCloudflareStart());
         page.addView(text(
-                "Tanpa membuka GitHub. Perlu Codespace aktif, tunnel/panel yang bisa dijangkau, dan kode panel tersimpan.",
+                "Tanpa membuka situs GitHub. Jika panel mati, aplikasi mencoba menyalakan Codespace dengan login GitHub tersimpan.",
                 11, 0xFFA4B1C6, false
         ), margin(0, 0, 0, 14));
 
@@ -880,6 +880,222 @@ public final class MainActivity extends Activity {
             return;
         }
         sendPanelRequest("/api/control", "POST", jsonObject("action", action), source, null);
+    }
+
+    private void confirmCloudflareStart() {
+        if (busy) {
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("Nyalakan Cloudflare Tunnel?")
+                .setMessage("Aplikasi akan mencoba menjalankan ./cloudflare-start.sh melalui panel. Jika panel tidak terjangkau, aplikasi akan mencoba membangunkan Codespace lewat GitHub. Codespace aktif memakai kuota compute.")
+                .setPositiveButton("Jalankan", (dialog, which) -> startCloudflareWithFallback())
+                .setNegativeButton("Batal", null)
+                .show();
+    }
+
+    private void startCloudflareWithFallback() {
+        if (busy) {
+            return;
+        }
+        String codespaceName = codespaceInput.getText().toString().trim();
+        if (!CODESPACE_NAME_PATTERN.matcher(codespaceName).matches()) {
+            setStatus("Nama Codespace tidak valid.", 0xFFFFB4A8);
+            return;
+        }
+
+        String panelCode = getEncryptedPanelCode();
+        String githubToken = getEncryptedToken();
+        if (panelCode.isEmpty() && githubToken.isEmpty()) {
+            setPanelStatus("Simpan kode panel atau hubungkan GitHub untuk menyalakan layanan.", 0xFFFFD37A);
+            return;
+        }
+
+        setBusy(true);
+        setStatus("Mencoba menjalankan Cloudflare Tunnel…", 0xFFC0CEC5);
+        setPanelStatus("Menghubungi panel Cloudflare…", 0xFFC0CEC5);
+        executor.execute(() -> {
+            try {
+                if (!panelCode.isEmpty()) {
+                    try {
+                        ApiResponse directResponse = panelRequest(
+                                "/api/control",
+                                "POST",
+                                panelCode,
+                                jsonObject("action", "cloudflare-start")
+                        );
+                        if (directResponse.statusCode == 401) {
+                            throw new IllegalStateException(
+                                    "Kode panel ditolak. Simpan ulang kode akses yang benar."
+                            );
+                        }
+                        if (directResponse.statusCode >= 200 && directResponse.statusCode < 300) {
+                            String message = directResponse.json.optString(
+                                    "message",
+                                    "Cloudflare Tunnel berhasil dijalankan."
+                            );
+                            runOnUiThread(() -> {
+                                setStatus("Perintah Cloudflare Tunnel berhasil.", 0xFF9CE0A7);
+                                setPanelStatus(message, 0xFF9CE0A7);
+                            });
+                            return;
+                        }
+                        if (directResponse.statusCode < 500) {
+                            throw panelError(directResponse);
+                        }
+                    } catch (java.io.IOException unavailable) {
+                        runOnUiThread(() -> setPanelStatus(
+                                "Panel tidak terjangkau. Mencoba membangunkan Codespace…",
+                                0xFFFFD37A
+                        ));
+                    }
+                }
+
+                if (githubToken.isEmpty()) {
+                    throw new IllegalStateException(
+                            "Panel tidak terjangkau. Hubungkan GitHub untuk membangunkan Codespace."
+                    );
+                }
+
+                runOnUiThread(() -> setStatus(
+                        "Panel tidak terjangkau; memeriksa Codespace melalui GitHub…",
+                        0xFFFFD37A
+                ));
+                String encodedName = URLEncoder.encode(
+                        codespaceName,
+                        StandardCharsets.UTF_8.name()
+                ).replace("+", "%20");
+                String endpoint = API_URL + "/user/codespaces/" + encodedName;
+                ApiResponse statusResponse = githubRequest(endpoint, "GET", githubToken, null);
+                if (statusResponse.statusCode == 401) {
+                    clearEncryptedToken();
+                    throw new IllegalStateException(
+                            "Sesi GitHub tidak valid atau sudah dicabut. Hubungkan GitHub lagi."
+                    );
+                }
+                if (statusResponse.statusCode == 403) {
+                    throw new IllegalStateException(
+                            "GitHub menolak akses Codespaces. Periksa izin codespace pada akun."
+                    );
+                }
+                if (statusResponse.statusCode < 200 || statusResponse.statusCode >= 300) {
+                    throw apiError(statusResponse);
+                }
+
+                String state = statusResponse.json.optString("state", "");
+                if (!"Available".equalsIgnoreCase(state)) {
+                    ApiResponse startResponse = githubRequest(
+                            endpoint + "/start",
+                            "POST",
+                            githubToken,
+                            "{}"
+                    );
+                    if (startResponse.statusCode == 401) {
+                        clearEncryptedToken();
+                        throw new IllegalStateException(
+                                "Sesi GitHub tidak valid atau sudah dicabut. Hubungkan GitHub lagi."
+                        );
+                    }
+                    if (startResponse.statusCode == 403) {
+                        throw new IllegalStateException(
+                                "GitHub menolak izin menyalakan Codespace."
+                        );
+                    }
+                    if (startResponse.statusCode < 200 || startResponse.statusCode >= 300) {
+                        throw apiError(startResponse);
+                    }
+
+                    long codespaceDeadline = System.currentTimeMillis() + 180_000L;
+                    while (System.currentTimeMillis() < codespaceDeadline) {
+                        statusResponse = githubRequest(endpoint, "GET", githubToken, null);
+                        if (statusResponse.statusCode == 401) {
+                            clearEncryptedToken();
+                            throw new IllegalStateException(
+                                    "Sesi GitHub tidak valid atau sudah dicabut. Hubungkan GitHub lagi."
+                            );
+                        }
+                        if (statusResponse.statusCode < 200 || statusResponse.statusCode >= 300) {
+                            throw apiError(statusResponse);
+                        }
+                        state = statusResponse.json.optString("state", "");
+                        String currentState = state;
+                        runOnUiThread(() -> setStatus("Status Codespace: " + currentState, 0xFFC0CEC5));
+                        if ("Available".equalsIgnoreCase(state)) {
+                            break;
+                        }
+                        if ("Failed".equalsIgnoreCase(state) || "Deleted".equalsIgnoreCase(state)) {
+                            throw new IllegalStateException("Codespace berstatus " + state + ".");
+                        }
+                        Thread.sleep(5000L);
+                    }
+                    if (!"Available".equalsIgnoreCase(state)) {
+                        throw new IllegalStateException(
+                                "Codespace belum aktif setelah 3 menit. Periksa statusnya di GitHub."
+                        );
+                    }
+                }
+
+                long panelDeadline = System.currentTimeMillis() + 300_000L;
+                boolean panelReady = false;
+                while (System.currentTimeMillis() < panelDeadline) {
+                    int responseCode = probePanel();
+                    if (responseCode >= 200 && responseCode < 400) {
+                        panelReady = true;
+                        break;
+                    }
+                    runOnUiThread(() -> setPanelStatus(
+                            "Codespace aktif; menunggu panel dan Cloudflare Tunnel…",
+                            0xFFFFD37A
+                    ));
+                    Thread.sleep(5000L);
+                }
+                if (!panelReady) {
+                    throw new IllegalStateException(
+                            "Codespace sudah aktif tetapi panel/Tunnel masih tidak terjangkau. "
+                                    + "Aplikasi tidak bisa menjalankan perintah Linux saat panel mati. "
+                                    + "Simpan dunia lalu restart Codespace agar startup hook mencoba lagi."
+                    );
+                }
+
+                if (panelCode.isEmpty()) {
+                    runOnUiThread(() -> setPanelStatus(
+                            "Codespace dan panel aktif. Simpan kode panel untuk menjalankan skrip Tunnel.",
+                            0xFFFFD37A
+                    ));
+                    return;
+                }
+
+                ApiResponse tunnelResponse = panelRequest(
+                        "/api/control",
+                        "POST",
+                        panelCode,
+                        jsonObject("action", "cloudflare-start")
+                );
+                if (tunnelResponse.statusCode == 401) {
+                    throw new IllegalStateException(
+                            "Kode panel ditolak. Simpan ulang kode akses yang benar."
+                    );
+                }
+                if (tunnelResponse.statusCode < 200 || tunnelResponse.statusCode >= 300) {
+                    throw panelError(tunnelResponse);
+                }
+                String message = tunnelResponse.json.optString(
+                        "message",
+                        "Cloudflare Tunnel berhasil dijalankan."
+                );
+                runOnUiThread(() -> {
+                    setStatus("Codespace dan Cloudflare Tunnel aktif.", 0xFF9CE0A7);
+                    setPanelStatus(message, 0xFF9CE0A7);
+                });
+            } catch (Exception error) {
+                String message = error.getMessage() == null
+                        ? "Tidak dapat menyalakan Cloudflare Tunnel."
+                        : error.getMessage();
+                runOnUiThread(() -> setPanelStatus(message, 0xFFFFB4A8));
+            } finally {
+                runOnUiThread(() -> setBusy(false));
+            }
+        });
     }
 
     private void confirmStopServer() {

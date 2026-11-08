@@ -1,6 +1,7 @@
 package com.himam.panel;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.graphics.Color;
@@ -11,6 +12,8 @@ import android.util.Base64;
 import android.view.Gravity;
 import android.view.View;
 import android.webkit.JavascriptInterface;
+import android.webkit.JsPromptResult;
+import android.webkit.JsResult;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.CookieManager;
@@ -19,6 +22,8 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Button;
+import android.widget.EditText;
+import android.text.InputType;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -119,6 +124,64 @@ public final class PanelActivity extends Activity {
             public void onProgressChanged(WebView view, int newProgress) {
                 progress.setProgress(newProgress);
                 progress.setVisibility(newProgress >= 100 ? View.GONE : View.VISIBLE);
+            }
+
+            @Override
+            public boolean onJsAlert(WebView view, String url, String message, JsResult result) {
+                if (!isPanelUri(Uri.parse(url))) {
+                    result.cancel();
+                    return true;
+                }
+                new AlertDialog.Builder(PanelActivity.this)
+                        .setMessage(message)
+                        .setPositiveButton("OK", (dialog, which) -> result.confirm())
+                        .setOnCancelListener(dialog -> result.confirm())
+                        .show();
+                return true;
+            }
+
+            @Override
+            public boolean onJsConfirm(WebView view, String url, String message, JsResult result) {
+                if (!isPanelUri(Uri.parse(url))) {
+                    result.cancel();
+                    return true;
+                }
+                new AlertDialog.Builder(PanelActivity.this)
+                        .setMessage(message)
+                        .setPositiveButton("Lanjut", (dialog, which) -> result.confirm())
+                        .setNegativeButton("Batal", (dialog, which) -> result.cancel())
+                        .setOnCancelListener(dialog -> result.cancel())
+                        .show();
+                return true;
+            }
+
+            @Override
+            public boolean onJsPrompt(
+                    WebView view,
+                    String url,
+                    String message,
+                    String defaultValue,
+                    JsPromptResult result
+            ) {
+                if (!isPanelUri(Uri.parse(url))) {
+                    result.cancel();
+                    return true;
+                }
+                EditText input = new EditText(PanelActivity.this);
+                input.setSingleLine(true);
+                input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
+                input.setText(defaultValue);
+                input.setSelection(input.length());
+                input.setPadding(dp(20), dp(12), dp(20), dp(4));
+                new AlertDialog.Builder(PanelActivity.this)
+                        .setTitle(message)
+                        .setView(input)
+                        .setPositiveButton("Simpan", (dialog, which) ->
+                                result.confirm(input.getText().toString()))
+                        .setNegativeButton("Batal", (dialog, which) -> result.cancel())
+                        .setOnCancelListener(dialog -> result.cancel())
+                        .show();
+                return true;
             }
 
             @Override
