@@ -4,6 +4,7 @@ import json
 import os
 import re
 import secrets
+import shlex
 import stat
 import subprocess
 import tempfile
@@ -81,6 +82,117 @@ def read_log_tail():
     except FileNotFoundError:
         return ""
     return "\n".join(content.splitlines()[-80:])
+
+
+def read_ops_log(name):
+    log_paths = {
+        "server": ROOT / "logs" / "latest.log",
+        "panel": ROOT / "logs" / "server-panel.log",
+        "startup": ROOT / "logs" / "server-manager.log",
+        "cloudflare": ROOT / "logs" / "cloudflare-tunnel.log",
+    }
+    log_path = log_paths.get(name)
+    if log_path is None:
+        return None
+    try:
+        with log_path.open("rb") as log_file:
+            log_file.seek(0, os.SEEK_END)
+            size = log_file.tell()
+            log_file.seek(max(0, size - LOG_LIMIT))
+            content = log_file.read().decode("utf-8", errors="replace")
+    except FileNotFoundError:
+        return f"Log {name} belum tersedia."
+    return "\n".join(content.splitlines()[-80:]) or f"Log {name} masih kosong."
+
+
+def cloudflare_process_running():
+    pid_file = ROOT / ".paper" / "cloudflare-tunnel.pid"
+    try:
+        pid_text = pid_file.read_text(encoding="utf-8").strip()
+        if not re.fullmatch(r"[1-9][0-9]*", pid_text):
+            return False
+        arguments = [
+            item.decode(errors="replace")
+            for item in (Path("/proc") / pid_text / "cmdline").read_bytes().split(b"\0")
+            if item
+        ]
+    except (FileNotFoundError, PermissionError, ProcessLookupError, OSError):
+        return False
+    return (
+        len(arguments) >= 3
+        and Path(arguments[0]).name == "cloudflared"
+        and arguments[1:3] == ["tunnel", "--config"]
+        and str(ROOT / "cloudflare-tunnel.yml") in arguments
+    )
+
+
+def run_ops_command(command):
+    if not isinstance(command, str) or len(command) > 160 or any(ord(char) < 32 for char in command):
+        return 400, {"error": "Perintah terminal tidak valid."}
+    try:
+        arguments = shlex.split(command)
+    except ValueError:
+        return 400, {"error": "Format perintah tidak valid."}
+
+    if arguments == ["help"]:
+        return 200, {
+            "output": (
+                "Perintah yang diizinkan:\n"
+                "help\nstatus\nlogs server|panel|startup|cloudflare\n"
+                "start server|cloudflare\nstop server|cloudflare\nrestart server"
+            )
+        }
+    if arguments == ["status"]:
+        server_pids = server_processes()
+        return 200, {
+            "output": (
+                f"Codespace: panel merespons di dalam workspace\n"
+                f"Server Minecraft: {'berjalan' if len(server_pids) == 1 else 'tidak berjalan' if not server_pids else 'proses ambigu'}\n"
+                f"Cloudflare Tunnel: {'berjalan' if cloudflare_process_running() else 'tidak berjalan'}"
+            )
+        }
+    if len(arguments) == 2 and arguments[0] == "logs" and arguments[1] in {
+        "server", "panel", "startup", "cloudflare"
+    }:
+        return 200, {"output": read_ops_log(arguments[1])}
+
+    scripts = {
+        ("start", "server"): (ROOT / "start-server-background.sh", 45),
+        ("stop", "server"): (ROOT / "stop-server.sh", 150),
+        ("restart", "server"): (ROOT / "restart-server.sh", 210),
+        ("start", "cloudflare"): (ROOT / "cloudflare-start.sh", 45),
+        ("stop", "cloudflare"): (ROOT / "cloudflare-stop.sh", 20),
+    }
+    selected = scripts.get(tuple(arguments))
+    if selected is None:
+        return 400, {
+            "error": (
+                "Perintah tidak diizinkan. Ketik help untuk melihat daftar perintah. "
+                "Terminal ini bukan shell Linux bebas."
+            )
+        }
+    if not CONTROL_LOCK.acquire(blocking=False):
+        return 409, {"error": "Perintah pengelolaan lain sedang berjalan."}
+    try:
+        script, timeout = selected
+        result = subprocess.run(
+            [str(script)],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+        )
+        output = (result.stdout + result.stderr).strip()
+        if result.returncode:
+            return 500, {"error": output[-2000:] or f"Skrip gagal ({result.returncode})."}
+        return 200, {"output": output[-6000:] or "Perintah berhasil."}
+    except subprocess.TimeoutExpired:
+        return 504, {"error": "Perintah melewati batas waktu; periksa log layanan."}
+    except OSError as error:
+        return 500, {"error": f"Tidak dapat menjalankan skrip: {error}"}
+    finally:
+        CONTROL_LOCK.release()
 
 
 def resolve_file_path(relative_path, for_write=False):
@@ -262,6 +374,22 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Security-Policy", "default-src 'self'; connect-src 'self'; style-src 'self'; script-src 'self'; manifest-src 'self'; img-src 'self' data:")
         self.end_headers()
         self.wfile.write(body)
+
+    def serve_resource_pack(self, include_body):
+        pack_path = ROOT / "himam-smp-resource-pack.zip"
+        try:
+            pack = pack_path.read_bytes()
+        except FileNotFoundError:
+            self.respond(404, {"error": "Resource pack tidak ditemukan."})
+            return
+        self.send_response(200)
+        self.send_header("Content-Type", "application/zip")
+        self.send_header("Content-Length", str(len(pack)))
+        self.send_header("Cache-Control", "public, max-age=3600")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.end_headers()
+        if include_body:
+            self.wfile.write(pack)
 
     def authorized(self):
         supplied = self.headers.get("X-Panel-Token", "")
@@ -447,6 +575,9 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed_url = urlparse(self.path)
         path = parsed_url.path
+        if path == "/resource-pack.zip":
+            self.serve_resource_pack(include_body=True)
+            return
         if path in ("/api/files", "/api/files/download"):
             if not self.authorized():
                 self.respond(401, {"error": "Kode panel salah atau belum diisi."})
@@ -487,8 +618,31 @@ class Handler(BaseHTTPRequestHandler):
         filename, content_type = target
         self.respond(200, (WEB_ROOT / filename).read_bytes(), content_type)
 
+    def do_HEAD(self):
+        if urlparse(self.path).path == "/resource-pack.zip":
+            self.serve_resource_pack(include_body=False)
+            return
+        self.send_error(404, "Tidak ditemukan.")
+
     def do_POST(self):
         path = urlparse(self.path).path
+        if path == "/api/ops":
+            if not self.authorized():
+                self.respond(401, {"error": "Kode panel salah atau belum diisi."})
+                return
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+                if length <= 0 or length > 1024:
+                    raise ValueError("Ukuran permintaan tidak valid.")
+                body = json.loads(self.rfile.read(length))
+                if not isinstance(body, dict):
+                    raise ValueError("Bentuk permintaan tidak valid.")
+            except (ValueError, json.JSONDecodeError, AttributeError):
+                self.respond(400, {"error": "Permintaan terminal tidak valid."})
+                return
+            status, result = run_ops_command(body.get("command"))
+            self.respond(status, result)
+            return
         if path in ("/api/files", "/api/files/upload"):
             self.update_server_files()
             return

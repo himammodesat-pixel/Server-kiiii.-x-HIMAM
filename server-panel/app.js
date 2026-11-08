@@ -4,6 +4,9 @@ const playerCount = document.querySelector("#player-count");
 const updatedAt = document.querySelector("#updated-at");
 const logs = document.querySelector("#logs");
 const overviewLogs = document.querySelector("#overview-logs");
+const opsOutput = document.querySelector("#ops-output");
+const opsInput = document.querySelector("#ops-command");
+const opsButton = document.querySelector("#ops-button");
 const accessFeedback = document.querySelector("#access-feedback");
 const startButton = document.querySelector("#start-button");
 const stopButton = document.querySelector("#stop-button");
@@ -73,6 +76,7 @@ function showPage(name) {
   const titles = {
     overview: "Ringkasan",
     console: "Console",
+    terminal: "Terminal",
     files: "File manager",
     players: "Pemain & moderasi",
     settings: "Akses & pengaturan",
@@ -80,6 +84,7 @@ function showPage(name) {
   document.querySelector("#page-title").textContent = titles[name] || "Server";
   if (name === "files") loadFiles(currentDirectory);
   if (name === "console") refreshLogs();
+  if (name === "terminal") runOpsCommand("status");
 }
 
 document.querySelectorAll("[data-nav]").forEach((item) => {
@@ -202,6 +207,33 @@ async function sendCommand(command, button, confirmation = "") {
   } finally {
     button.disabled = false;
     button.textContent = original;
+  }
+}
+
+async function runOpsCommand(command) {
+  const cleanCommand = command.trim();
+  if (!cleanCommand || /[\r\n]/.test(cleanCommand)) return;
+  if (!token()) {
+    opsOutput.textContent = "Simpan kode panel di menu Akses & pengaturan untuk memakai terminal.";
+    return;
+  }
+  opsButton.disabled = true;
+  const original = opsButton.textContent;
+  opsButton.textContent = "Menjalankan…";
+  try {
+    const result = await request("/api/ops", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ command: cleanCommand }),
+    });
+    opsOutput.textContent = `$ ${cleanCommand}\n${result.output || "Perintah selesai."}`;
+    opsOutput.scrollTop = opsOutput.scrollHeight;
+  } catch (error) {
+    opsOutput.textContent = `$ ${cleanCommand}\n${error.message}`;
+    opsOutput.scrollTop = opsOutput.scrollHeight;
+  } finally {
+    opsButton.disabled = false;
+    opsButton.textContent = original;
   }
 }
 
@@ -437,6 +469,18 @@ consoleButton.addEventListener("click", () => {
 consoleInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") consoleButton.click();
 });
+opsButton.addEventListener("click", () => {
+  const command = opsInput.value;
+  opsInput.value = "";
+  runOpsCommand(command);
+});
+opsInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") opsButton.click();
+});
+document.querySelectorAll(".quick-ops").forEach((button) => {
+  button.addEventListener("click", () => runOpsCommand(button.dataset.opsCommand || ""));
+});
+document.querySelector("#refresh-ops").addEventListener("click", () => runOpsCommand("status"));
 
 document.querySelector("#refresh-files").addEventListener("click", () => loadFiles(currentDirectory));
 document.querySelector("#new-folder").addEventListener("click", async () => {

@@ -26,6 +26,7 @@
       <nav class="navigation" aria-label="Navigasi server">
         <button class="nav-item active" type="button" data-nav="overview"><span>▦</span> Ringkasan</button>
         <button class="nav-item" type="button" data-nav="console"><span>⌘</span> Console</button>
+        <button class="nav-item" type="button" data-nav="terminal"><span>›_</span> Terminal</button>
         <button class="nav-item" type="button" data-nav="files"><span>▤</span> File manager</button>
         <button class="nav-item" type="button" data-nav="players"><span>♙</span> Pemain & moderasi</button>
       </nav>
@@ -113,6 +114,26 @@
         </section>
       </section>
 
+      <section class="page" data-page="terminal">
+        <section class="panel-card console-card">
+          <div class="section-heading"><div><p class="eyebrow">REMOTE SERVICE CONTROL</p><h2>Terminal pengelolaan terbatas</h2></div><button id="refresh-ops" class="button button-muted" type="button">↻ Status</button></div>
+          <p class="muted">Lihat status dan log, atau jalankan aksi server/Tunnel yang diizinkan. Ini bukan shell Linux bebas.</p>
+          <pre id="ops-output" class="log-output">Masukkan kode panel untuk mengakses terminal.</pre>
+          <div class="console-form">
+            <span class="prompt">&gt;</span>
+            <input id="ops-command" maxlength="160" placeholder="Ketik help untuk daftar perintah" autocomplete="off">
+            <button id="ops-button" class="button button-green" type="button">Jalankan</button>
+          </div>
+          <div class="quick-actions">
+            <button class="button button-muted quick-ops" data-ops-command="status" type="button">Status</button>
+            <button class="button button-muted quick-ops" data-ops-command="logs server" type="button">Log server</button>
+            <button class="button button-muted quick-ops" data-ops-command="logs cloudflare" type="button">Log Tunnel</button>
+            <button class="button button-muted quick-ops" data-ops-command="start cloudflare" type="button">Start Tunnel</button>
+          </div>
+          <p class="muted small-text">Aksi tersedia: <code>help</code>, <code>status</code>, <code>logs server|panel|startup|cloudflare</code>, <code>start server|cloudflare</code>, <code>stop server|cloudflare</code>, dan <code>restart server</code>.</p>
+        </section>
+      </section>
+
       <section class="page" data-page="files">
         <section class="panel-card file-card">
           <div class="section-heading file-heading">
@@ -141,7 +162,7 @@
               <textarea id="file-content" spellcheck="false" placeholder="Pilih file teks untuk melihat atau mengedit isinya." disabled></textarea>
             </div>
           </div>
-          <p class="muted small-text">Batas editor teks 1 MB, unggah/unduh 10 MB. Link, secrets Codespace, terminal Linux, dan file sistem tidak tersedia.</p>
+          <p class="muted small-text">Batas editor teks 1 MB, unggah/unduh 10 MB. Link, secrets Codespace, shell Linux bebas, dan file sistem tidak tersedia.</p>
         </section>
       </section>
 

@@ -49,7 +49,7 @@ arbitrary workspace files, or a Linux shell. To start it manually, run
 Forward port `8765` in the Codespaces **Ports** tab and keep its visibility set
 to **Private**. Open the forwarded HTTPS URL on your Android phone and use the
 browser menu to install/add the panel to your home screen. Log in to GitHub
-when prompted.
+if prompted.
 
 Get the panel's access code in the Codespace terminal with
 `cat .paper/server-panel-token`, then enter it in the panel. This code has no
@@ -65,9 +65,10 @@ If the code is rejected, copy it again directly from that terminal command,
 paste it into the panel's code field without quotation marks, and press
 **Simpan**. A green “Kode akses diterima” message confirms it worked. The
 browser panel remembers the code until you clear it or remove browser data.
-The Minecraft console can run powerful server commands; it never runs Linux
-terminal commands. Use the dedicated **Matikan** button for a graceful server
-shutdown.
+The Minecraft console can run powerful server commands. The separate remote
+operations terminal only accepts the documented server/Tunnel actions and
+log/status requests; it never runs arbitrary Linux commands. Use the dedicated
+**Matikan** button for a graceful server shutdown.
 
 ## Android app
 
@@ -108,18 +109,16 @@ After installing, choose **Hubungkan GitHub** once and approve the device
 code. The encrypted login is reused on later launches; no GitHub website is
 needed for normal Codespace starts. Choose **GitHub
 tersambung · login ulang** only if you intentionally need to reconnect. Then
-press **Nyalakan Codespace + Cloudflare**. The app calls the GitHub Codespaces
-API, then waits for the Codespace startup hook to start the server, panel, and
-Cloudflare Tunnel. The separate **Jalankan ./cloudflare-start.sh** button
-sends the authenticated `cloudflare-start` action to the panel, which runs
-that script without opening the GitHub website. It first tries the panel; if
-the panel is unreachable, the app can use its saved GitHub connection to
-start/wake the Codespace, wait for the startup hook, and retry. GitHub may ask
-for confirmation, and the Codespace consumes billable compute while running.
-If the Codespace is already active but the Tunnel is unreachable, the app
-cannot execute Linux commands remotely; it reports this and the startup hook
-must run again. The app's native controls store the panel access code
-encrypted on the Android device.
+press **Nyalakan Codespace**. This button only calls the GitHub Codespaces
+start API; it does not call the Tunnel control action. After the workspace
+starts, its configured startup hook launches the server, panel, and Cloudflare
+Tunnel. The separate **Jalankan ./cloudflare-start.sh** button only sends the
+authenticated Tunnel action to the panel and never starts the Codespace. If
+the Tunnel is down and the panel cannot be reached, start the Codespace
+separately so its startup hook can reconnect the Tunnel. GitHub may ask for
+confirmation, and the Codespace consumes billable compute while running. The
+app's native controls store the panel access code encrypted on the Android
+device.
 
 **Buka dashboard server lengkap** opens the responsive web panel inside the
 app, including its console, file manager, player moderation, broadcasts, and
@@ -128,17 +127,20 @@ dashboard stores it in that WebView's local storage, separately from the
 encrypted code used by the native controls. File uploads use Android's file
 picker and downloads ask where to save the file. The embedded panel accepts
 navigation only to the configured HTTPS panel host; external HTTPS links open
-in a browser. The panel remains limited to its allowlisted server files and
-Minecraft console; it does not provide a Linux shell or full Pterodactyl
-infrastructure management.
+in a browser. The panel remains limited to its allowlisted server files,
+Minecraft console, and predefined service scripts; it does not provide an
+arbitrary Linux shell or full Pterodactyl infrastructure management.
 
-Android **v1.2.1** fixes JavaScript confirmation and prompt dialogs in the
-embedded dashboard, enabling actions such as moderation, file creation, and
-deletion. Dashboard links now navigate inside the app, with external HTTPS
-destinations opened in a browser. **Jelajahi repository** reads the public
-`main` branch without additional GitHub permissions, lets you navigate
-folders and read UTF-8 files up to 2 MB, and opens larger or binary files on
-GitHub. Browsing is read-only and cannot expose account secrets or private
+Android **v1.2.2** separates the native Codespace and Cloudflare buttons and
+adds a restricted remote operations terminal to the dashboard. It can show
+service status and allowlisted logs, and run only predefined server and Tunnel
+scripts; it does not execute arbitrary Linux shell commands. The separate
+Minecraft console remains available for Minecraft commands. This release
+also includes the JavaScript confirm/prompt dialogs needed for moderation and
+file actions inside the app. **Jelajahi repository** reads the public `main`
+branch without additional GitHub permissions, lets you navigate folders and
+read UTF-8 files up to 2 MB, and opens larger or binary files on GitHub.
+Browsing is read-only and cannot expose account secrets or private
 repositories. Use **Codespace / Copilot** to open Codespaces and Copilot in
 GitHub; AI access follows the signed-in GitHub account's entitlements.
 
@@ -196,9 +198,9 @@ does not.
 
 The **Codespace & Copilot** link opens GitHub Codespaces in a browser. Sign in
 to GitHub there and open the active Codespace to use VS Code and Copilot Chat;
-Copilot availability depends on the GitHub account. This is separate from the
-in-app Minecraft console and does not expose a Linux terminal through the
-public panel.
+Copilot availability depends on the GitHub account. The public panel has a
+restricted server-operations terminal but does not expose an arbitrary Linux
+shell.
 
 The `.devcontainer` `postStartCommand` starts Paper, the control panel, and
 the configured tunnel whenever the container starts, including when the app
@@ -292,7 +294,9 @@ from Vault/LuckPerms (`owner`, `admin`, `moderator`, `helper`, `builder`, `vip`,
 or `default`), player name, balance, world, ping, and claim reward
 countdown/balance. It also shows the current 24-hour Minecraft time from the
 overworld clock, refreshed from live world ticks, and the ClearLag auto-removal
-countdown from its active task. The scoreboard links to `/shop`, `/kit`, and
+countdown from its active task every 20 ticks. ClearLag's timer is tick-based,
+so low server TPS makes the real-world time until removal longer. The scoreboard
+links to `/shop`, `/kit`, and
 `/claim`. No staff-only scoreboard is selected.
 
 Killing a hostile mob triggers one of 20 random HIMAM kill effects at the
@@ -303,11 +307,13 @@ Particles use normal visibility and reduced counts to limit client/network
 load. Effects use particles and sounds only; players and passive mobs do not
 trigger them, and visual lightning will not ignite blocks or damage nearby
 players. No resource pack is needed: all effects use vanilla particles and
-sounds. Download the standalone datapack as
+sounds. The particle set uses long-established vanilla effects for broader
+Java-client and Geyser compatibility; Geyser still translates particles for
+Bedrock, and client particle settings or mods can hide or replace visuals.
+Download the standalone datapack as
 [`himam_kill_effect-datapack.zip`](./himam_kill_effect-datapack.zip); install it
-in a world's `datapacks` directory. The current server is Minecraft 26.2;
-Bedrock connects through Geyser, whose particle translation should be checked
-with a Bedrock client.
+in a world's `datapacks` directory. The standalone file is a datapack, not a
+client resource pack, and cannot be forced as a resource-pack download.
 
 ## Shop
 
@@ -316,6 +322,14 @@ to sell it, and Shift + right-click to sell all matching items. Prices use
 Koin and Indonesian number formatting. `/sell` is routed through
 EconomyShopGUI's prices instead of Essentials' separate worth list. For bulk
 sales use `/sellall inventory`.
+
+The server requires the public Java resource pack at
+[https://panel.vannilasmp.my.id/resource-pack.zip](https://panel.vannilasmp.my.id/resource-pack.zip).
+It adds original item textures for the four HIMAM custom weapons; declining the
+pack prevents joining. The ZIP is served directly by the control-panel
+endpoint, and `server.properties` pins its SHA-1 so clients can cache and
+verify the download. Bedrock clients receive packs through Geyser; custom Java
+item models may not render on every Bedrock client.
 
 ## Custom stack sizes
 

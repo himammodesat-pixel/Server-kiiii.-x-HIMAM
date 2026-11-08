@@ -26,8 +26,8 @@ android {
         applicationId "com.himam.panel"
         minSdk 23
         targetSdk 35
-        versionCode 6
-        versionName "1.2.1"
+        versionCode 7
+        versionName "1.2.2"
         buildConfigField "String", "DEFAULT_PANEL_URL", "\"${defaultPanelUrl}\""
         buildConfigField "String", "GITHUB_OAUTH_CLIENT_ID", "\"${githubOAuthClientId}\""
         buildConfigField "String", "CODESPACE_NAME", "\"${codespaceName}\""
