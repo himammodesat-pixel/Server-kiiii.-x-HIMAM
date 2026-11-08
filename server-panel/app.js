@@ -360,7 +360,22 @@ async function downloadFile(path) {
       const payload = await response.json();
       throw new Error(payload.error || `Unduhan gagal (${response.status}).`);
     }
-    const url = URL.createObjectURL(await response.blob());
+    const blob = await response.blob();
+    if (window.AndroidPanel && typeof window.AndroidPanel.saveDownload === "function") {
+      const reader = new FileReader();
+      reader.onload = () => {
+        window.AndroidPanel.saveDownload(
+          path.split("/").pop(),
+          blob.type || "application/octet-stream",
+          String(reader.result),
+        );
+      };
+      reader.onerror = () => setFeedback(fileFeedback, "File tidak dapat disiapkan untuk diunduh.", "error");
+      reader.readAsDataURL(blob);
+      setFeedback(fileFeedback, `Menyiapkan unduhan ${path}`, "success");
+      return;
+    }
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
     link.download = path.split("/").pop();

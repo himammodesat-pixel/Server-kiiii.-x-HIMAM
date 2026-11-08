@@ -115,6 +115,16 @@ public final class MainActivity extends Activity {
                 13, 0xFFA4B1C6, false
         ), margin(0, 0, 0, 18));
 
+        Button dashboardButton = button(
+                "▦  Buka dashboard server lengkap",
+                0xFF168A4B,
+                0xFF31A960,
+                Color.WHITE
+        );
+        page.addView(dashboardButton, margin(0, 0, 0, 12));
+        dashboardButton.setOnClickListener(view ->
+                startActivity(new Intent(this, PanelActivity.class)));
+
         status = text("Periksa koneksi GitHub.", 14, 0xFFB6C1D1, true);
         status.setPadding(dp(15), dp(14), dp(15), dp(14));
         status.setBackground(rounded(0xFF151F30, 0xFF2B3A52, 10));
@@ -143,6 +153,20 @@ public final class MainActivity extends Activity {
         startButton = button("▶  Nyalakan Codespace + Cloudflare", 0xFF168A4B, 0xFF31A960, Color.WHITE);
         page.addView(startButton, margin(0, 0, 0, 8));
         startButton.setOnClickListener(view -> confirmAndStart());
+
+        startCloudflareButton = button(
+                "☁  Jalankan ./cloudflare-start.sh",
+                0xFF202B40,
+                0xFF364761,
+                0xFFEAF0FA
+        );
+        page.addView(startCloudflareButton, margin(0, 0, 0, 5));
+        startCloudflareButton.setOnClickListener(view ->
+                sendControl("cloudflare-start", startCloudflareButton));
+        page.addView(text(
+                "Tanpa membuka GitHub. Perlu Codespace aktif, tunnel/panel yang bisa dijangkau, dan kode panel tersimpan.",
+                11, 0xFFA4B1C6, false
+        ), margin(0, 0, 0, 14));
 
         LinearLayout githubActions = new LinearLayout(this);
         githubActions.setOrientation(LinearLayout.HORIZONTAL);
@@ -188,11 +212,6 @@ public final class MainActivity extends Activity {
         page.addView(serverActions, margin(0, 0, 0, 12));
         startServerButton.setOnClickListener(view -> sendControl("start", startServerButton));
         stopServerButton.setOnClickListener(view -> confirmStopServer());
-
-        startCloudflareButton = button("☁  Nyalakan Cloudflare Tunnel", 0xFF202B40, 0xFF364761, 0xFFEAF0FA);
-        page.addView(startCloudflareButton, margin(0, 0, 0, 12));
-        startCloudflareButton.setOnClickListener(view ->
-                sendControl("cloudflare-start", startCloudflareButton));
 
         page.addView(text("PLAYER MANAGEMENT", 10, 0xFF91A0B6, true), margin(0, 8, 0, 8));
         LinearLayout broadcastRow = new LinearLayout(this);

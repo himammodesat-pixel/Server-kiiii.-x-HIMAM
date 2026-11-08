@@ -110,23 +110,34 @@ needed for normal Codespace starts. Choose **GitHub
 tersambung · login ulang** only if you intentionally need to reconnect. Then
 press **Nyalakan Codespace + Cloudflare**. The app calls the GitHub Codespaces
 API, then waits for the Codespace startup hook to start the server, panel, and
-Cloudflare Tunnel. The **Nyalakan Cloudflare Tunnel** button can start the
-Tunnel remotely while the panel endpoint is reachable. If the Tunnel itself
-is offline and the button cannot connect, use **Nyalakan Codespace +
-Cloudflare** to start/wake the Codespace; its startup hook reconnects the
-Tunnel. GitHub may ask for confirmation, and the Codespace consumes billable
-compute while running. Enter the panel access
-code once in the app; it is stored encrypted on that Android device. The app
-then waits for the Codespace, Paper, and Cloudflare Tunnel and provides
-native server-status, start/stop, broadcast, moderation, and console controls.
+Cloudflare Tunnel. The separate **Jalankan ./cloudflare-start.sh** button
+sends the authenticated `cloudflare-start` action to the panel, which runs
+that script without opening GitHub. It only works while the Codespace and
+panel endpoint are reachable and a valid panel access code is saved. It
+cannot wake a stopped Codespace or repair an unreachable Tunnel by itself;
+use **Nyalakan Codespace + Cloudflare** for that, which requires the GitHub
+connection. GitHub may ask for confirmation, and the Codespace consumes
+billable compute while running. The app's native controls store the panel
+access code encrypted on the Android device.
 
-Android **v1.1.0** adds a native dashboard and **Jelajahi repository**. The
-repository browser reads the public `main` branch without additional GitHub
-permissions, lets you navigate folders and read UTF-8 files up to 2 MB, and
-opens larger or binary files on GitHub. Browsing is read-only and cannot
-expose account secrets or private repositories. Use **Codespace / Copilot** to
-open Codespaces and Copilot in GitHub; AI access follows the signed-in GitHub
-account's entitlements.
+**Buka dashboard server lengkap** opens the responsive web panel inside the
+app, including its console, file manager, player moderation, broadcasts, and
+server power controls. Enter the panel access code there as well; the web
+dashboard stores it in that WebView's local storage, separately from the
+encrypted code used by the native controls. File uploads use Android's file
+picker and downloads ask where to save the file. The embedded panel accepts
+navigation only to the configured HTTPS panel host; external HTTPS links open
+in a browser. The panel remains limited to its allowlisted server files and
+Minecraft console; it does not provide a Linux shell or full Pterodactyl
+infrastructure management.
+
+Android **v1.2.0** adds the embedded full web dashboard and a direct
+Cloudflare-start action. **Jelajahi repository** reads the public `main`
+branch without additional GitHub permissions, lets you navigate folders and
+read UTF-8 files up to 2 MB, and opens larger or binary files on GitHub.
+Browsing is read-only and cannot expose account secrets or private
+repositories. Use **Codespace / Copilot** to open Codespaces and Copilot in
+GitHub; AI access follows the signed-in GitHub account's entitlements.
 
 Starting a stopped Codespace does not guarantee that its web services are
 already ready at the instant GitHub reports it as available. Device network,
